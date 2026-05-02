@@ -6,9 +6,9 @@ node_modules
 # Testing
 /coverage
 
-# Next.js
-/.next/
-/out/
+# Next.js & Build output
+.next/
+out/
 build/
 dist/
 
