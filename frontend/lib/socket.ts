@@ -1,7 +1,7 @@
 import { io, Socket } from "socket.io-client";
 
-// Hardcoded port 4001 to bypass stale environment variables without restarting terminal
-const SOCKET_URL = "http://localhost:4001";
+// Use environment variable for production, fallback to localhost for local dev
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4001";
 
 let socket: Socket | null = null;
 

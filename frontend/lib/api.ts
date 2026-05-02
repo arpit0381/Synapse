@@ -1,5 +1,5 @@
-// Hardcoded port 4001 to bypass stale environment variables without restarting terminal
-const API_URL = "http://localhost:4001";
+// Use environment variable for production, fallback to localhost for local dev
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
 /** Get stored access token */
 function getToken(): string | null {
