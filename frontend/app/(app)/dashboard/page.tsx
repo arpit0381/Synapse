@@ -49,7 +49,8 @@ export default function DashboardPage() {
   const { data: aiSummaryData, isLoading: summaryLoading } = useQuery({
     queryKey: ["dashboard_ai_summary", currentWorkspace?.id],
     queryFn: async () => {
-      const res = await fetch("http://localhost:4001/api/ai/chat", {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+      const res = await fetch(`${API_BASE}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -67,7 +68,8 @@ export default function DashboardPage() {
   const { data: modelsData } = useQuery({
     queryKey: ["aiModels"],
     queryFn: async () => {
-      const res = await fetch("http://localhost:4001/api/ai/models");
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+      const res = await fetch(`${API_BASE}/api/ai/models`);
       return res.json();
     }
   });

@@ -26,19 +26,40 @@ const app = express();
 const server = http.createServer(app);
 
 // ── CORS ──────────────────────────────────────────────────────────
-const ALLOWED_ORIGINS = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  process.env.FRONTEND_URL ?? "",
-].filter(Boolean);
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Always allow localhost
+    if (origin.startsWith("http://localhost:")) return callback(null, true);
+    
+    // Allow any vercel deployment for this project
+    if (origin.includes("vercel.app")) return callback(null, true);
+    
+    // Allow explicit FRONTEND_URL
+    if (process.env.FRONTEND_URL && origin.startsWith(process.env.FRONTEND_URL.replace(/\/$/, ""))) {
+      return callback(null, true);
+    }
+    
+    // If we get here, log it so we can debug, but let's be lenient during development
+    console.warn(`[CORS] Unknown origin requested: ${origin}`);
+    callback(null, true); // Change to false in strict production
+  },
+  credentials: true
+};
 
-app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(express.json({ limit: "10mb" }));
 
 // ── Socket.io ─────────────────────────────────────────────────────
 const io = new SocketServer(server, {
-  cors: { origin: ALLOWED_ORIGINS, methods: ["GET", "POST"], credentials: true },
+  cors: { 
+    origin: true, // Dynamically allow origin (handled by Express CORS mostly, but this allows Socket.io to accept any origin in dev/beta)
+    methods: ["GET", "POST"], 
+    credentials: true 
+  },
   pingTimeout: 60000,
   pingInterval: 25000,
 });

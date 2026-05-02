@@ -55,7 +55,8 @@ export default function AiAssistantPage() {
   const { data: modelsData } = useQuery({
     queryKey: ["aiModels"],
     queryFn: async () => {
-      const res = await fetch("http://localhost:4001/api/ai/models");
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+      const res = await fetch(`${API_BASE}/api/ai/models`);
       return res.json();
     }
   });
@@ -85,7 +86,8 @@ export default function AiAssistantPage() {
         .filter(m => m.id !== "welcome")
         .map(m => ({ role: m.role, content: m.content }));
 
-      const res = await fetch("http://localhost:4001/api/ai/chat", {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+      const res = await fetch(`${API_BASE}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
