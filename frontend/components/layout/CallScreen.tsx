@@ -69,6 +69,9 @@ function Tile({
         />
       ) : (
         <div className="flex flex-col items-center gap-2">
+          {stream && !isLocal && (
+            <audio ref={(el) => { if (el && el.srcObject !== stream) el.srcObject = stream; }} autoPlay playsInline />
+          )}
           <div
             className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white transition-all duration-150 ${isSpeaking ? "ring-4 ring-green-400 ring-offset-2 ring-offset-[#1e1f22]" : ""}`}
             style={{ background: strHsl(name) }}
@@ -160,11 +163,14 @@ function Btn({
 }
 
 /* ─── Voice avatar (voice-only mode) ───────────────────────────── */
-function VoiceAvatar({ name, isMuted, isSpeaking, isLocal }: {
-  name: string; isMuted: boolean; isSpeaking: boolean; isLocal?: boolean;
+function VoiceAvatar({ name, isMuted, isSpeaking, isLocal, stream }: {
+  name: string; isMuted: boolean; isSpeaking: boolean; isLocal?: boolean; stream?: MediaStream | null;
 }) {
   return (
     <div className="flex flex-col items-center gap-2">
+      {stream && !isLocal && (
+        <audio ref={(el) => { if (el && el.srcObject !== stream) el.srcObject = stream; }} autoPlay playsInline />
+      )}
       <div className="relative">
         <div
           className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white transition-all duration-200 ${isSpeaking ? "ring-4 ring-green-400 ring-offset-4 ring-offset-[#111214]" : "ring-2 ring-transparent"}`}
@@ -285,6 +291,7 @@ export function CallScreen({ onEndCall }: { onEndCall: () => void }) {
                   isMuted={store.isMuted}
                   isSpeaking={iAmSpeaking}
                   isLocal
+                  stream={store.localStream}
                 />
                 {Object.entries(store.participants).map(([uid, p]) => (
                   <VoiceAvatar
@@ -292,6 +299,7 @@ export function CallScreen({ onEndCall }: { onEndCall: () => void }) {
                     name={p.name}
                     isMuted={p.isMuted}
                     isSpeaking={p.isSpeaking}
+                    stream={store.remoteStreams[uid]}
                   />
                 ))}
               </div>

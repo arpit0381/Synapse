@@ -5,6 +5,7 @@ import { useCallStore } from "@/store/callStore";
 import { useAppStore } from "@/store/appStore";
 import { getSocket } from "@/lib/socket";
 import { Phone, Users, PhoneOff } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 interface Props {
   channelId: string;
@@ -73,8 +74,9 @@ export function CallBanner({ channelId, channelName }: Props) {
         channelName,
         workspaceId: useAppStore.getState().currentWorkspace?.id 
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error("[CallBanner] media error", e);
+      toast.error(e.message === "Permission denied" ? "Microphone permission denied" : "Could not access microphone");
     }
   };
 

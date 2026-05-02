@@ -9,6 +9,7 @@ import { useAppStore } from "@/store/appStore";
 import { useCallStore } from "@/store/callStore";
 import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
+import { toast } from "react-hot-toast";
 
 const STATUS_COLOR: Record<string, string> = { online: "bg-green-500", away: "bg-yellow-500", dnd: "bg-red-500", offline: "bg-muted" };
 const STATUS_LABEL: Record<string, string> = { online: "Active now", away: "Away", dnd: "Do Not Disturb", offline: "Offline" };
@@ -83,8 +84,9 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
         userId: user?.id,
         userName: user?.name,
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to get media", e);
+      toast.error(e.message === "Permission denied" ? "Microphone/Camera permission denied" : "Could not access media devices");
     }
   };
 
