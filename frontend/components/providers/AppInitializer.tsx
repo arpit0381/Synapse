@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/appStore";
 import { useCallStore } from "@/store/callStore";
@@ -20,12 +20,17 @@ export function AppInitializer() {
     updatePresence, syncPresence, setUnreadNotifications, setCurrentUserRole
   } = useAppStore();
 
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   // Redirect if not authed
   useEffect(() => {
-    if (!isAuthenticated && !pathname.startsWith("/auth")) {
+    if (hydrated && !isAuthenticated && !pathname.startsWith("/auth")) {
       router.push("/auth/login");
     }
-  }, [isAuthenticated, pathname, router]);
+  }, [hydrated, isAuthenticated, pathname, router]);
 
   // Bootstrap data
   useEffect(() => {
