@@ -1,11 +1,8 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
   "/(app)/dm/[id]/page": "app/(app)/dm/[id]/page.js",
-  "/(app)/channels/[id]/page": "app/(app)/channels/[id]/page.js",
-  "/(app)/bookmarks/page": "app/(app)/bookmarks/page.js",
-  "/(app)/search/page": "app/(app)/search/page.js",
   "/(app)/analytics/page": "app/(app)/analytics/page.js",
-  "/(app)/settings/workspace/page": "app/(app)/settings/workspace/page.js",
   "/(app)/settings/profile/page": "app/(app)/settings/profile/page.js"
 }
