@@ -1,0 +1,223 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── THEME: Obsidian (Default Dark) ─────────────────────────────── */
+:root,
+[data-theme="obsidian"] {
+  --background: 240 7% 6%;        /* #0A0A0F */
+  --surface: 240 8% 8%;           /* #111118 */
+  --border: 240 15% 14%;          /* #1E1E2E */
+  --accent: 248 100% 69%;         /* #6C63FF */
+  --accent-dim: 248 85% 55%;
+  --accent-foreground: 0 0% 100%;
+  --foreground: 240 100% 96%;     /* #F0F0FF */
+  --muted: 240 12% 18%;
+  --muted-foreground: 240 10% 49%; /* #6B6B8A */
+  --card: 240 8% 10%;
+  --card-foreground: 240 100% 96%;
+  --primary: 248 100% 69%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 15% 14%;
+  --secondary-foreground: 240 100% 96%;
+  --destructive: 0 68% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --popover: 240 10% 10%;
+  --popover-foreground: 240 100% 96%;
+  --input: 240 15% 14%;
+  --ring: 248 100% 69%;
+  --radius: 0.5rem;
+
+  /* Sidebar widths */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 60px;
+}
+
+/* ── THEME: Aurora (Dark Teal) ──────────────────────────────────── */
+[data-theme="aurora"] {
+  --background: 205 54% 5%;       /* #070D12 */
+  --surface: 205 47% 9%;          /* #0D1B24 */
+  --border: 205 50% 14%;          /* #152233 */
+  --accent: 168 100% 42%;         /* #00D4AA */
+  --accent-dim: 168 85% 32%;
+  --accent-foreground: 0 0% 5%;
+  --foreground: 160 40% 93%;      /* #E8F5F0 */
+  --muted: 205 40% 16%;
+  --muted-foreground: 180 17% 43%; /* #5A8080 */
+  --card: 205 47% 11%;
+  --card-foreground: 160 40% 93%;
+  --primary: 168 100% 42%;
+  --primary-foreground: 0 0% 5%;
+  --secondary: 205 50% 14%;
+  --secondary-foreground: 160 40% 93%;
+  --destructive: 0 68% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --popover: 205 47% 9%;
+  --popover-foreground: 160 40% 93%;
+  --input: 205 50% 14%;
+  --ring: 168 100% 42%;
+  --radius: 0.5rem;
+}
+
+/* ── THEME: Ember (Dark Orange) ─────────────────────────────────── */
+[data-theme="ember"] {
+  --background: 36 100% 5%;       /* #0F0900 */
+  --surface: 36 100% 8%;          /* #1A1200 */
+  --border: 36 100% 13%;          /* #2A1F00 */
+  --accent: 29 100% 50%;          /* #FF7A00 */
+  --accent-dim: 29 90% 40%;
+  --accent-foreground: 0 0% 5%;
+  --foreground: 40 100% 94%;      /* #FFF5E0 */
+  --muted: 36 80% 18%;
+  --muted-foreground: 30 25% 43%; /* #8A7050 */
+  --card: 36 100% 10%;
+  --card-foreground: 40 100% 94%;
+  --primary: 29 100% 50%;
+  --primary-foreground: 0 0% 5%;
+  --secondary: 36 100% 13%;
+  --secondary-foreground: 40 100% 94%;
+  --destructive: 0 68% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --popover: 36 100% 8%;
+  --popover-foreground: 40 100% 94%;
+  --input: 36 100% 13%;
+  --ring: 29 100% 50%;
+  --radius: 0.5rem;
+}
+
+/* ── THEME: Arctic (Light) ──────────────────────────────────────── */
+[data-theme="arctic"] {
+  --background: 234 100% 99%;     /* #F8F9FF */
+  --surface: 0 0% 100%;           /* #FFFFFF */
+  --border: 228 20% 90%;          /* #E2E4F0 */
+  --accent: 243 75% 59%;          /* #4F46E5 */
+  --accent-dim: 243 70% 48%;
+  --accent-foreground: 0 0% 100%;
+  --foreground: 240 50% 8%;       /* #0D0D1A */
+  --muted: 228 20% 95%;
+  --muted-foreground: 220 9% 46%; /* #6B7280 */
+  --card: 0 0% 100%;
+  --card-foreground: 240 50% 8%;
+  --primary: 243 75% 59%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 228 20% 93%;
+  --secondary-foreground: 240 50% 8%;
+  --destructive: 0 68% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 50% 8%;
+  --input: 228 20% 90%;
+  --ring: 243 75% 59%;
+  --radius: 0.5rem;
+}
+
+/* ── BASE STYLES ────────────────────────────────────────────────── */
+@layer base {
+  * { @apply border-border; box-sizing: border-box; }
+  body {
+    @apply bg-background text-foreground font-body;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6 { @apply font-display; }
+  code, pre, kbd { @apply font-mono; }
+  ::selection { background: hsl(var(--accent) / 0.3); }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-muted rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground; }
+}
+
+/* ── UTILITY CLASSES ────────────────────────────────────────────── */
+@layer utilities {
+  .glass {
+    background: hsl(var(--surface) / 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .glass-border {
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+  .accent-gradient {
+    background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-dim)));
+  }
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-dim)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground
+           hover:text-foreground hover:bg-muted transition-all duration-150 cursor-pointer;
+  }
+  .sidebar-item.active {
+    @apply text-foreground bg-accent/10 text-accent;
+  }
+  .skeleton {
+    @apply bg-muted animate-pulse rounded;
+    background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--border)) 50%, hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  .message-hover:hover .message-actions { @apply opacity-100; }
+  .message-actions { @apply opacity-0 transition-opacity duration-150; }
+  .focus-ring { @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background; }
+  .theme-transition { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+}
+
+/* ── CUSTOM SCROLLABLE CHAT ─────────────────────────────────────── */
+.chat-scroll {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.chat-scroll::-webkit-scrollbar { width: 4px; }
+.chat-scroll::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+
+/* ── TYPING INDICATOR DOTS ──────────────────────────────────────── */
+.typing-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: typing 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ── MODERN MESSAGING UX ────────────────────────────────────────── */
+@keyframes message-glow {
+  0% { box-shadow: 0 0 0 0 hsl(var(--accent) / 0); }
+  30% { box-shadow: 0 0 20px 4px hsl(var(--accent) / 0.3); }
+  100% { box-shadow: 0 0 10px 1px hsl(var(--accent) / 0.1); }
+}
+
+.message-glow-effect {
+  animation: message-glow 1.5s ease-out forwards;
+}
+
+.reaction-pop {
+  animation: pop-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.8) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── KANBAN ─────────────────────────────────────────────────────── */
+.kanban-column { @apply flex flex-col gap-2 min-h-[200px]; }
+.kanban-card-drag { @apply opacity-50 cursor-grabbing; }
+
+/* ── RECHARTS OVERRIDES ─────────────────────────────────────────── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: var(--radius) !important;
+  color: hsl(var(--foreground)) !important;
+}
