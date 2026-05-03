@@ -10,6 +10,7 @@ import {
   X, File, Image as ImageIcon, Download, Sparkles, Loader2
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import ChatToolbar from "@/components/chat/ChatToolbar";
 
 import { useAppStore } from "@/store/appStore";
 import { useCallStore } from "@/store/callStore";
@@ -64,7 +65,6 @@ function Avatar({ name, url, size = "sm" }: { name: string; url?: string; size?:
 }
 
 function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark, onPin }: { msg: Message; isOwn: boolean; currentUserId?: string; onReact: (id: string, emoji: string) => void; onReply: () => void; onBookmark?: (id: string) => void; onPin?: (id: string) => void }) {
-  const [showActions, setShowActions] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   
   const isSystem = msg.userId === "system" || msg.metadata?.type === "system";
@@ -72,112 +72,131 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
   if (isSystem) {
     return (
       <div className="flex items-center gap-3 px-8 py-3 group">
-        <div className="h-px flex-1 bg-border/40" />
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/60 to-transparent" />
         <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground/80 bg-muted/30 px-4 py-1.5 rounded-full border border-border/40 backdrop-blur-sm">
           <span className="text-accent">{msg.content}</span>
           <span className="text-[10px] opacity-60">• {formatTime(msg.timestamp)}</span>
         </div>
-        <div className="h-px flex-1 bg-border/40" />
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/60 to-transparent" />
       </div>
     );
   }
 
   const reactionsCount = Object.keys(msg.reactions || {}).length;
 
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(msg.content);
+    toast.success("Copied to clipboard");
+  };
+
   return (
-    <div 
-      className={cn("group flex gap-4 px-5 py-2 hover:bg-muted/40 transition-colors relative")} 
-      onMouseEnter={() => setShowActions(true)} 
-      onMouseLeave={() => { setShowActions(false); setShowEmoji(false); }}
-    >
-      <Avatar name={msg.userName} url={msg.avatarUrl} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 mb-0.5">
-          <span className="font-semibold text-[15px] text-foreground">{msg.userName}</span>
-          {msg.isPinned && <Pin className="w-3 h-3 text-accent" />}
-          <span className="text-[11px] font-medium text-muted-foreground/80">{formatTime(msg.timestamp)}</span>
-        </div>
-        
-        {/* Reply Preview */}
-        {msg.metadata?.reply_to && (
-          <div className="mb-1.5 pl-2 border-l-2 border-accent/50 text-xs opacity-80 cursor-pointer hover:opacity-100 transition-opacity">
-            <div className="font-bold mb-0.5 text-accent">{msg.metadata.reply_to.senderName}</div>
-            <div className="truncate max-w-[400px]">{msg.metadata.reply_to.content}</div>
-          </div>
-        )}
-
-        <div className="text-[15px] text-foreground/90 leading-relaxed whitespace-pre-wrap break-words">
-          {msg.content}
-        </div>
-        
-        {/* Attachment Preview */}
-        {msg.metadata?.attachment && (
-          <div className="mt-2 max-w-sm rounded-xl border border-border bg-surface p-3 flex items-start gap-3 hover:bg-muted transition-colors cursor-pointer">
-            <div className="p-2 rounded-lg bg-accent/10 text-accent">
-              {msg.metadata.attachment.type.includes('image') ? <ImageIcon className="w-5 h-5" /> : <File className="w-5 h-5" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate text-foreground">{msg.metadata.attachment.name}</p>
-              <p className="text-xs text-muted-foreground">{(msg.metadata.attachment.size / 1024).toFixed(1)} KB • {msg.metadata.attachment.type.split('/')[1]?.toUpperCase()}</p>
-            </div>
-            <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-background rounded-full transition-colors"><Download className="w-4 h-4" /></button>
-          </div>
-        )}
-
-        {/* Reactions */}
-        {reactionsCount > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2 z-10">
-            {Object.entries(msg.reactions!).map(([emoji, users]) => (
-              <button
-                key={emoji}
-                onClick={() => onReact(msg.id, emoji)}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-0.5 border rounded-full text-xs transition-all duration-200 hover:scale-105",
-                  currentUserId && users.includes(currentUserId)
-                    ? "bg-accent/10 border-accent/30 text-accent font-semibold" 
-                    : "bg-surface border-border text-muted-foreground hover:bg-muted"
-                )}
+    <div className="message-row group">
+      {/* Floating Action Bar */}
+      <div className="msg-actions">
+        <div className="relative">
+          <button onClick={() => setShowEmoji(!showEmoji)} className="msg-action-btn" title="React">
+            <Smile className="w-4 h-4" />
+          </button>
+          <AnimatePresence>
+            {showEmoji && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 4 }} 
+                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                exit={{ opacity: 0, scale: 0.9, y: 4 }}
+                className="absolute right-0 top-full mt-2 bg-surface/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl p-2 flex flex-wrap gap-0.5 z-50 w-[200px]"
               >
-                <span>{emoji}</span>
-                <span className="text-[10px]">{users.length}</span>
-              </button>
-            ))}
-          </div>
-        )}
+                {EMOJI_QUICK.map(e => (
+                  <button key={e} onClick={() => { onReact(msg.id, e); setShowEmoji(false); }}
+                    className="w-9 h-9 flex items-center justify-center text-lg hover:bg-muted rounded-xl transition-all hover:scale-125">{e}</button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        <button onClick={onReply} className="msg-action-btn" title="Reply"><Reply className="w-4 h-4" /></button>
+        {onBookmark && <button onClick={() => onBookmark(msg.id)} className="msg-action-btn" title="Bookmark"><Bookmark className="w-4 h-4" /></button>}
+        {onPin && <button onClick={() => onPin(msg.id)} className="msg-action-btn" title="Pin"><Pin className="w-4 h-4" /></button>}
+        <div className="w-px h-5 bg-border mx-0.5" />
+        <button onClick={copyToClipboard} className="msg-action-btn" title="Copy">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        </button>
       </div>
 
-      {/* Floating actions */}
-      <AnimatePresence>
-        {showActions && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }} 
-            animate={{ opacity: 1, scale: 1 }} 
-            exit={{ opacity: 0, scale: 0.95 }} 
-            transition={{ duration: 0.1 }}
-            className="absolute right-5 top-0 -translate-y-1/2 flex items-center gap-0.5 bg-surface border border-border rounded-lg shadow-lg px-1 py-1 z-20"
-          >
-            <div className="relative">
-              <button onClick={() => setShowEmoji(!showEmoji)} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><Smile className="w-4 h-4" /></button>
-              {showEmoji && (
-                <div className="absolute right-0 top-full mt-2 bg-surface border border-border rounded-xl shadow-xl p-2 flex flex-wrap gap-1 z-50 w-48">
-                  {EMOJI_QUICK.map(e => (
-                    <button 
-                      key={e} 
-                      onClick={() => { onReact(msg.id, e); setShowEmoji(false); }}
-                      className="w-8 h-8 flex items-center justify-center text-lg hover:bg-muted rounded-full transition-transform hover:scale-125"
-                    >
-                      {e}
-                    </button>
-                  ))}
+      <div className="flex gap-3.5">
+        <Avatar name={msg.userName} url={msg.avatarUrl} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-0.5">
+            <span className="font-semibold text-[14px] text-foreground hover:underline cursor-pointer">{msg.userName}</span>
+            {msg.isPinned && <Pin className="w-3 h-3 text-accent" />}
+            <span className="text-[11px] font-medium text-muted-foreground/60">{formatTime(msg.timestamp)}</span>
+          </div>
+          
+          {msg.metadata?.reply_to && (
+            <div className="mb-2 flex items-start gap-2 pl-2.5 border-l-2 border-accent/40 text-xs rounded-r-lg py-1.5 px-2 bg-accent/5 cursor-pointer hover:bg-accent/10 transition-colors -ml-0.5">
+              <div>
+                <div className="font-bold mb-0.5 text-accent text-[11px]">{msg.metadata.reply_to.senderName}</div>
+                <div className="truncate max-w-[400px] text-muted-foreground">{msg.metadata.reply_to.content}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="text-[14.5px] text-foreground/90 leading-[1.65] whitespace-pre-wrap break-words">
+            {msg.content}
+          </div>
+          
+          {/* Attachment Preview */}
+          {msg.metadata?.attachment && (
+            <div className="mt-2 relative">
+              {msg.metadata.attachment.type?.includes('image') && msg.metadata.attachment.url ? (
+                <div className="relative inline-block">
+                  <a href={msg.metadata.attachment.isUploading ? "#" : msg.metadata.attachment.url} target={msg.metadata.attachment.isUploading ? "_self" : "_blank"} rel="noopener noreferrer" className={cn("block max-w-[400px] rounded-xl overflow-hidden border border-border/30 mt-1 bg-black/5 hover:opacity-90 transition-opacity shadow-sm", msg.metadata.attachment.isUploading && "opacity-60 pointer-events-none blur-[1px]")}>
+                    <img src={msg.metadata.attachment.url} alt={msg.metadata.attachment.name || "Image attachment"} className="w-full h-auto object-contain max-h-[300px]" />
+                  </a>
+                  {msg.metadata.attachment.isUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-black/60 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 text-white font-medium shadow-xl"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-xs">Uploading...</span></div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className={cn("relative inline-block", msg.metadata.attachment.isUploading && "opacity-70 pointer-events-none")}>
+                  <div className="max-w-sm rounded-xl border border-border bg-surface/80 p-3 flex items-start gap-3 hover:bg-muted/50 transition-all cursor-pointer shadow-sm" onClick={() => { if(msg.metadata.attachment.url && !msg.metadata.attachment.isUploading) window.open(msg.metadata.attachment.url, '_blank'); }}>
+                    <div className="p-2 rounded-lg bg-accent/10 text-accent">{msg.metadata.attachment.isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <File className="w-5 h-5" />}</div>
+                    <div className="flex-1 min-w-0 pr-4">
+                      <p className="text-sm font-semibold truncate text-foreground">{msg.metadata.attachment.name || "Attachment"}</p>
+                      <p className="text-xs text-muted-foreground">{msg.metadata.attachment.size ? (msg.metadata.attachment.size / 1024).toFixed(1) + " KB • " : ""}{msg.metadata.attachment.type?.split('/')[1]?.toUpperCase() || "FILE"}</p>
+                    </div>
+                    {msg.metadata.attachment.url && !msg.metadata.attachment.isUploading && (
+                      <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-background rounded-lg transition-colors btn-press" onClick={(e) => { e.stopPropagation(); window.open(msg.metadata.attachment.url, '_blank'); }}><Download className="w-4 h-4" /></button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-            <button onClick={onReply} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Reply"><Reply className="w-4 h-4" /></button>
-            {onBookmark && <button onClick={() => onBookmark(msg.id)} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Bookmark"><Bookmark className="w-4 h-4" /></button>}
-            {onPin && <button onClick={() => onPin(msg.id)} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Pin"><Pin className="w-4 h-4" /></button>}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+
+          {/* Reactions */}
+          {reactionsCount > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2 z-10">
+              {Object.entries(msg.reactions!).map(([emoji, users]) => (
+                <button
+                  key={emoji}
+                  onClick={() => onReact(msg.id, emoji)}
+                  className={cn(
+                    "reaction-pop flex items-center gap-1 px-2.5 py-1 border rounded-full text-xs transition-all duration-200 hover:scale-105 btn-press",
+                    currentUserId && users.includes(currentUserId)
+                      ? "bg-accent/10 border-accent/30 text-accent font-semibold shadow-sm" 
+                      : "bg-surface/80 border-border/50 text-muted-foreground hover:bg-muted hover:border-border"
+                  )}
+                >
+                  <span>{emoji}</span>
+                  <span className="text-[10px] font-semibold">{users.length}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -185,16 +204,16 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
 // ── Main Page ─────────────────────────────────────────────────────────
 export default function ChannelPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { user, currentWorkspace, presenceMap, onlineUserIds } = useAppStore();
+  const { user, currentWorkspace, presenceMap, onlineUserIds, updateUnreadCount } = useAppStore();
   const queryClient = useQueryClient();
-  const store = useCallStore();
+  const callStore = useCallStore();
 
   const handleCall = async (type: "audio" | "video") => {
-    if (store.isCalling && store.callRoomId === id) return; // already in this call
+    if (callStore.isCalling && callStore.callRoomId === id) return; // already in this call
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: type === "video", audio: true });
-      store.setLocalStream(stream);
-      store.setCalling({ isCalling: true, roomId: id, isGroupCall: true, callType: type, channelName: channel.name });
+      callStore.setLocalStream(stream);
+      callStore.setCalling({ isCalling: true, roomId: id, isGroupCall: true, callType: type, channelName: channel.name });
       const socket = getSocket();
       socket.emit("join-call", {
         roomId: id,
@@ -232,10 +251,14 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
   });
   const channel = channelData?.channel || { name: "...", description: "Loading..." };
 
+  // Clear unread count when channel is opened
+  useEffect(() => {
+    updateUnreadCount(id, 0);
+  }, [id, updateUnreadCount]);
+
   const { data: membersData } = useQuery({
     queryKey: ["channel_members", id],
     queryFn: () => api.channels.getMembers(id),
-    enabled: rightPanel === "members"
   });
 
   // 2. Fetch Messages
@@ -398,18 +421,52 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
 
   // 4. Send Message Mutation
   const sendMutation = useMutation({
-    mutationFn: (data: { content: string, metadata?: any }) => 
-      api.messages.send({ channel_id: id, content: data.content || " ", user_id: user!.id, metadata: data.metadata }),
+    mutationFn: async (data: { content: string, metadata?: any, file?: File }) => {
+      let finalMetadata = { ...data.metadata };
+      
+      if (data.file) {
+        const { uploadUrl, token, publicUrl } = await api.files.getUploadUrl({
+          filename: data.file.name,
+          contentType: data.file.type,
+          workspaceId: currentWorkspace!.id,
+          channelId: id,
+          userId: user!.id,
+          sizeBytes: data.file.size
+        });
+        
+        await api.files.upload(uploadUrl, data.file, token);
+        
+        finalMetadata.attachment = {
+          name: data.file.name,
+          size: data.file.size,
+          type: data.file.type,
+          url: publicUrl
+        };
+      }
+      
+      return api.messages.send({ channel_id: id, content: data.content || " ", user_id: user!.id, metadata: finalMetadata });
+    },
     onMutate: async (newMsgData) => {
       // Optimitic update
       await queryClient.cancelQueries({ queryKey: ["messages", id] });
       const previous = queryClient.getQueryData(["messages", id]);
       
+      let tempAttachment = newMsgData.metadata?.attachment;
+      if (newMsgData.file) {
+        tempAttachment = {
+          name: newMsgData.file.name,
+          size: newMsgData.file.size,
+          type: newMsgData.file.type,
+          url: URL.createObjectURL(newMsgData.file),
+          isUploading: true
+        };
+      }
+      
       const tempMsg = {
         id: `temp-${Date.now()}`,
         content: newMsgData.content,
         created_at: new Date().toISOString(),
-        metadata: newMsgData.metadata || {},
+        metadata: { ...newMsgData.metadata, attachment: tempAttachment },
         profiles: { id: user?.id, full_name: user?.name, avatar_url: user?.avatar_url }
       };
 
@@ -420,6 +477,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
       return { previous };
     },
     onError: (err, newMsg, context: any) => {
+      toast.error("Failed to send message: " + err.message);
       if (context?.previous) {
         queryClient.setQueryData(["messages", id], context.previous);
       }
@@ -429,32 +487,26 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
     }
   });
 
-  function handleSend() {
+  async function handleSend() {
     if (!input.trim() && !attachment) return;
     
+    // Stop typing indicator early
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    getSocket()?.emit("typing_stop", { channelId: id, userId: user?.id });
+
     const metadata: any = {};
     if (replyTo) metadata.reply_to = replyTo;
     
-    // Simulate Attachment Upload
-    if (attachment) {
-      metadata.attachment = {
-        name: attachment.name,
-        size: attachment.size,
-        type: attachment.type,
-        url: "#" // Fake URL for simulation
-      };
-    }
-    
-    sendMutation.mutate({ content: input.trim(), metadata });
-    
+    let currentInput = input.trim();
+    let currentAttachment = attachment;
+
+    // Clear input early so user can continue typing
     setInput("");
     setReplyTo(null);
     setAttachment(null);
     inputRef.current?.focus();
     
-    // Stop typing indicator
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    getSocket()?.emit("typing_stop", { channelId: id, userId: user?.id });
+    sendMutation.mutate({ content: currentInput || " ", metadata, file: currentAttachment || undefined });
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -507,29 +559,44 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
     <div className="flex h-full w-full relative">
       <div className="flex flex-col flex-1 h-full bg-background relative min-w-0">
         {/* ── TopBar ── */}
-        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-20 sticky top-0 shadow-sm">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 glass-strong flex-shrink-0 z-20 sticky top-0">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
               <Hash className="w-4 h-4 text-accent" />
             </div>
-            <h2 className="font-display font-bold text-foreground text-base truncate tracking-tight">{channel.name}</h2>
-            {channel.description && (
-              <>
-                <div className="h-4 w-px bg-border flex-shrink-0 mx-1" />
-                <p className="text-[13px] text-muted-foreground truncate hidden sm:block font-medium">{channel.description}</p>
-              </>
-            )}
+            <div className="flex flex-col min-w-0">
+              <h2 className="font-display font-bold text-foreground text-[15px] truncate tracking-tight">{channel.name}</h2>
+              {channel.description && (
+                <p className="text-[11px] text-muted-foreground truncate hidden sm:block">{channel.description}</p>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button onClick={async () => { if (isSummarizing) return; setIsSummarizing(true); try { const data = await api.ai.summarize({ messages: displayMessages.map(m => ({ user: m.userName, content: m.content })), channel_name: channel.name }); setAiSummary(data.summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} className={cn("p-2 rounded-lg transition-colors", isSummarizing ? "text-accent animate-pulse" : "text-muted-foreground hover:text-accent hover:bg-accent/10")} title="✨ AI Summarize">{isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}</button>
-            <button onClick={() => handleCall("audio")} className="p-2 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"><Phone className="w-4 h-4" /></button>
-            <button onClick={() => handleCall("video")} className="p-2 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"><Video className="w-4 h-4" /></button>
-            <div className="w-px h-5 bg-border mx-1" />
-            <button onClick={() => setRightPanel(rightPanel === "pins" ? null : "pins")} className={cn("p-2 rounded-lg transition-colors", rightPanel === "pins" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")}><Pin className="w-4 h-4" /></button>
-            <button onClick={() => setRightPanel(rightPanel === "search" ? null : "search")} className={cn("p-2 rounded-lg transition-colors", rightPanel === "search" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")}><Search className="w-4 h-4" /></button>
-            <button onClick={() => setRightPanel(rightPanel === "members" ? null : "members")} className={cn("p-2 rounded-lg transition-colors", rightPanel === "members" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")}><Users className="w-4 h-4" /></button>
-            <div className="w-px h-5 bg-border mx-1" />
-            <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+
+          {/* Active members stack */}
+          {membersData?.members && (
+            <div className="hidden md:flex items-center -space-x-2 mr-2">
+              {membersData.members.slice(0, 4).map((m: any) => {
+                const isOn = onlineUserIds.includes(m.id);
+                return (
+                  <div key={m.id} className={cn("w-7 h-7 rounded-full border-2 border-surface flex items-center justify-center text-[9px] font-bold text-white transition-all", isOn ? "ring-1 ring-green-500/40" : "opacity-60")} style={{ backgroundColor: stringToColor(m.full_name || m.username || "U") }} title={m.full_name || m.username}>
+                    {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full rounded-full object-cover" /> : getInitials(m.full_name || m.username || "U")}
+                  </div>
+                );
+              })}
+              {membersData.members.length > 4 && (
+                <div className="w-7 h-7 rounded-full border-2 border-surface bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">+{membersData.members.length - 4}</div>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button onClick={async () => { if (isSummarizing) return; setIsSummarizing(true); try { const data = await api.ai.summarize({ messages: displayMessages.map(m => ({ user: m.userName, content: m.content })), channel_name: channel.name }); setAiSummary(data.summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} className={cn("p-2 rounded-lg transition-all btn-press", isSummarizing ? "text-accent animate-pulse" : "text-muted-foreground hover:text-accent hover:bg-accent/10")} title="AI Summarize">{isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}</button>
+            <button onClick={() => handleCall("audio")} className="p-2 rounded-lg text-muted-foreground hover:text-green-400 hover:bg-green-500/10 transition-all btn-press" title="Audio Call"><Phone className="w-4 h-4" /></button>
+            <button onClick={() => handleCall("video")} className="p-2 rounded-lg text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 transition-all btn-press" title="Video Call"><Video className="w-4 h-4" /></button>
+            <div className="w-px h-5 bg-border/40 mx-1" />
+            <button onClick={() => setRightPanel(rightPanel === "pins" ? null : "pins")} className={cn("p-2 rounded-lg transition-all btn-press", rightPanel === "pins" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")} title="Pins"><Pin className="w-4 h-4" /></button>
+            <button onClick={() => setRightPanel(rightPanel === "search" ? null : "search")} className={cn("p-2 rounded-lg transition-all btn-press", rightPanel === "search" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")} title="Search"><Search className="w-4 h-4" /></button>
+            <button onClick={() => setRightPanel(rightPanel === "members" ? null : "members")} className={cn("p-2 rounded-lg transition-all btn-press", rightPanel === "members" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")} title="Members"><Users className="w-4 h-4" /></button>
           </div>
         </div>
 
@@ -568,10 +635,10 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
 
           {groupedMessages.map(({ label, messages: msgs }) => (
             <div key={label}>
-              <div className="flex items-center gap-2 px-5 py-4">
-                <div className="h-px flex-1 bg-border/60" />
-                <span className="text-[11px] text-muted-foreground font-semibold border border-border bg-surface px-3 py-1 rounded-full uppercase tracking-wider">{label}</span>
-                <div className="h-px flex-1 bg-border/60" />
+              <div className="flex items-center gap-3 px-5 py-3">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/60 to-transparent" />
+                <span className="text-[10px] text-muted-foreground/80 font-bold border border-border/40 bg-surface/80 backdrop-blur-sm px-3 py-1 rounded-full uppercase tracking-[0.08em]">{label}</span>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/60 to-transparent" />
               </div>
               <div className="space-y-0.5">
                 {msgs.map(msg => (
@@ -608,7 +675,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* ── Input Area ── */}
-        <div className="flex-shrink-0 px-5 py-4 border-t border-border bg-background/95 backdrop-blur-sm z-10">
+        <div className="flex-shrink-0 px-5 py-3 glass-strong z-10">
           
           {replyTo && (
             <div className="flex items-center justify-between bg-surface border border-border rounded-t-2xl px-4 py-2.5 mx-1 -mb-1 shadow-sm">
@@ -641,12 +708,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          <div className={cn("flex items-end gap-2 bg-surface border border-border focus-within:border-accent/80 focus-within:ring-4 focus-within:ring-accent/10 transition-all shadow-sm relative", (replyTo || attachment) ? "rounded-b-2xl rounded-tr-none rounded-tl-none" : "rounded-2xl")}>
-            <div className="flex items-center gap-1 px-3 py-2.5 flex-shrink-0 self-end">
-              <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-              <button onClick={() => fileInputRef.current?.click()} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"><Paperclip className="w-4 h-4" /></button>
-            </div>
-            
+          <div className={cn("flex items-end gap-2 bg-surface border border-border focus-within:border-accent/80 focus-within:ring-4 focus-within:ring-accent/10 transition-all shadow-sm relative", (replyTo || attachment) ? "rounded-b-none rounded-t-none" : "rounded-t-2xl rounded-b-none")}>
             <textarea
               ref={inputRef}
               value={input}
@@ -654,18 +716,11 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               onKeyDown={handleKeyDown}
               placeholder={`Message #${channel.name}`}
               rows={1}
-              className="flex-1 bg-transparent text-[14.5px] text-foreground placeholder:text-muted-foreground py-3.5 resize-none outline-none max-h-[200px] leading-relaxed"
+              className="flex-1 bg-transparent text-[14.5px] text-foreground placeholder:text-muted-foreground py-3.5 px-4 resize-none outline-none max-h-[200px] leading-relaxed"
               style={{ minHeight: "48px" }}
             />
 
             <div className="flex items-center gap-1 px-2 py-2 flex-shrink-0 self-end z-10 relative">
-              <button 
-                onClick={() => setShowInputEmoji(!showInputEmoji)} 
-                className={cn("p-2 rounded-full transition-colors", showInputEmoji ? "bg-accent/20 text-accent" : "text-muted-foreground hover:text-accent hover:bg-accent/10")}
-              >
-                <Smile className="w-4 h-4" />
-              </button>
-
               <AnimatePresence>
                 {showInputEmoji && (
                   <motion.div 
@@ -704,6 +759,19 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               </button>
             </div>
           </div>
+          {/* Toolbar */}
+          <div className="bg-surface border border-border border-t-0 rounded-b-2xl overflow-hidden">
+            <ChatToolbar 
+              inputRef={inputRef}
+              input={input}
+              setInput={setInput}
+              onFileClick={() => fileInputRef.current?.click()}
+              onEmojiClick={() => setShowInputEmoji(!showInputEmoji)}
+              showEmoji={showInputEmoji}
+              members={(membersData?.members || []).map((m: any) => ({ id: m.id, name: m.full_name || m.username || "Unknown", avatar_url: m.avatar_url }))}
+            />
+          </div>
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
         </div>
       </div>
 

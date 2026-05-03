@@ -61,6 +61,7 @@ interface AppState {
   setChannels: (channels: Channel[]) => void;
   setActiveChannel: (channelId: string) => void;
   updateUnreadCount: (channelId: string, count: number) => void;
+  incrementUnreadCount: (channelId: string) => void;
 
   // UI State
   sidebarOpen: boolean;
@@ -131,6 +132,12 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           channels: state.channels.map((c) =>
             c.id === channelId ? { ...c, unread_count: count } : c
+          ),
+        })),
+      incrementUnreadCount: (channelId) =>
+        set((state) => ({
+          channels: state.channels.map((c) =>
+            c.id === channelId ? { ...c, unread_count: (c.unread_count || 0) + 1 } : c
           ),
         })),
 

@@ -44,8 +44,12 @@ router.get("/", async (req: Request, res: Response) => {
 // ── POST /api/dm ─────────────────────────────────────────────
 router.post("/", async (req: Request, res: Response) => {
   const { workspace_id, from_user_id, to_user_id, content, metadata } = req.body;
-  if (!workspace_id || !from_user_id || !to_user_id || !content?.trim()) {
-    res.status(400).json({ error: "workspace_id, from_user_id, to_user_id, content required" });
+  
+  const hasContent = content && content.trim() !== "";
+  const hasAttachment = metadata && metadata.attachment;
+
+  if (!workspace_id || !from_user_id || !to_user_id || (!hasContent && !hasAttachment)) {
+    res.status(400).json({ error: "workspace_id, from_user_id, to_user_id, and either content or attachment are required" });
     return;
   }
 

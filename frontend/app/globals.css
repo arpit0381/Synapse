@@ -136,6 +136,11 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
   }
+  .glass-strong {
+    background: hsl(var(--surface) / 0.85);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+  }
   .glass-border {
     border: 1px solid hsl(var(--border) / 0.5);
   }
@@ -148,23 +153,78 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  /* ── Premium Sidebar Item ─────────────────────────────── */
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground
-           hover:text-foreground hover:bg-muted transition-all duration-150 cursor-pointer;
+    @apply flex items-center gap-3 px-3 py-[7px] rounded-lg text-[13px] font-medium text-muted-foreground
+           hover:text-foreground hover:bg-muted/60 transition-all duration-200 cursor-pointer relative;
   }
   .sidebar-item.active {
     @apply text-foreground bg-accent/10 text-accent;
   }
+  .sidebar-item.active::before {
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    border-radius: 0 4px 4px 0;
+    background: hsl(var(--accent));
+    box-shadow: 0 0 8px hsl(var(--accent) / 0.4);
+  }
+
+  /* ── Skeleton ──────────────────────────────────────── */
   .skeleton {
     @apply bg-muted animate-pulse rounded;
     background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--border)) 50%, hsl(var(--muted)) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
+
+  /* ── Message Hover System ─────────────────────────── */
+  .message-row {
+    @apply relative px-5 py-1 transition-all duration-150;
+  }
+  .message-row:hover {
+    background: hsl(var(--muted) / 0.3);
+  }
+  .message-row:hover .msg-actions {
+    @apply opacity-100 scale-100;
+  }
+  .msg-actions {
+    @apply opacity-0 scale-95 transition-all duration-200 absolute -top-4 right-5 z-20
+           flex items-center gap-0.5 p-1 bg-surface border border-border rounded-lg shadow-xl;
+  }
+  .msg-action-btn {
+    @apply p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150;
+  }
+  .msg-action-btn:hover {
+    transform: scale(1.1);
+  }
+  .msg-action-btn:active {
+    transform: scale(0.95);
+  }
+
   .message-hover:hover .message-actions { @apply opacity-100; }
   .message-actions { @apply opacity-0 transition-opacity duration-150; }
   .focus-ring { @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background; }
   .theme-transition { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+
+  /* ── Unread Badge ──────────────────────────────────── */
+  .unread-badge {
+    @apply text-[10px] font-bold bg-accent text-accent-foreground rounded-full
+           min-w-[18px] h-[18px] flex items-center justify-center px-1 flex-shrink-0;
+    box-shadow: 0 0 6px hsl(var(--accent) / 0.3);
+  }
+
+  /* ── Button Ripple ─────────────────────────────────── */
+  .btn-press {
+    @apply transition-transform duration-100;
+  }
+  .btn-press:active {
+    transform: scale(0.95);
+  }
 }
 
 /* ── CUSTOM SCROLLABLE CHAT ─────────────────────────────────────── */
@@ -174,6 +234,14 @@
 }
 .chat-scroll::-webkit-scrollbar { width: 4px; }
 .chat-scroll::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
 /* ── TYPING INDICATOR DOTS ──────────────────────────────────────── */
 .typing-dot {
@@ -208,6 +276,27 @@
 @keyframes pop-in {
   from { opacity: 0; transform: scale(0.8) translateY(10px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Subtle shimmer for premium elements ─── */
+@keyframes subtle-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ── Status Ring Animation ──────────────────────────────────── */
+@keyframes status-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(142 76% 36% / 0.4); }
+  50% { box-shadow: 0 0 0 4px hsl(142 76% 36% / 0); }
+}
+.status-online-ring {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* ── Section Label ─────────────────────────────────── */
+.section-label {
+  @apply text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/70 px-3 py-2 select-none;
+  letter-spacing: 0.1em;
 }
 
 /* ── KANBAN ─────────────────────────────────────────────────────── */
