@@ -40,10 +40,14 @@ function Tile({
   showVideo?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const store = useCallStore();
 
   useEffect(() => {
     if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(e => console.error("Video autoplay blocked", e));
+      }
     }
   }, [stream]);
 
@@ -64,13 +68,23 @@ function Tile({
           ref={videoRef}
           autoPlay
           playsInline
-          muted={isLocal}
+          muted={isLocal || store.isDeafened}
           className={`w-full h-full object-cover${isLocal ? " scale-x-[-1]" : ""}`}
         />
       ) : (
         <div className="flex flex-col items-center gap-2">
           {stream && !isLocal && (
-            <audio ref={(el) => { if (el && el.srcObject !== stream) el.srcObject = stream; }} autoPlay playsInline />
+            <audio 
+              ref={(el) => { 
+                if (el && el.srcObject !== stream) {
+                  el.srcObject = stream;
+                  el.play().catch(e => console.error("Audio autoplay blocked", e));
+                }
+              }} 
+              autoPlay 
+              playsInline 
+              muted={store.isDeafened}
+            />
           )}
           <div
             className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white transition-all duration-150 ${isSpeaking ? "ring-4 ring-green-400 ring-offset-2 ring-offset-[#1e1f22]" : ""}`}
@@ -166,10 +180,21 @@ function Btn({
 function VoiceAvatar({ name, isMuted, isSpeaking, isLocal, stream }: {
   name: string; isMuted: boolean; isSpeaking: boolean; isLocal?: boolean; stream?: MediaStream | null;
 }) {
+  const store = useCallStore();
   return (
     <div className="flex flex-col items-center gap-2">
       {stream && !isLocal && (
-        <audio ref={(el) => { if (el && el.srcObject !== stream) el.srcObject = stream; }} autoPlay playsInline />
+        <audio 
+          ref={(el) => { 
+            if (el && el.srcObject !== stream) {
+              el.srcObject = stream;
+              el.play().catch(e => console.error("Audio autoplay blocked", e));
+            }
+          }} 
+          autoPlay 
+          playsInline 
+          muted={store.isDeafened}
+        />
       )}
       <div className="relative">
         <div

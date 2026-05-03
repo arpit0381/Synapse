@@ -79,7 +79,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const flushIceCandidates = async (pc: RTCPeerConnection, peerId: string) => {
     const queue = iceCandidateQueue.current[peerId] || [];
     for (const c of queue) {
-      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) { console.error("ICE error", e); }
     }
     iceCandidateQueue.current[peerId] = [];
   };
@@ -88,7 +88,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (peersRef.current[peerId]) {
       peersRef.current[peerId].close();
     }
-    iceCandidateQueue.current[peerId] = [];
+    // We intentionally DO NOT clear the iceCandidateQueue here, 
+    // because candidates might have arrived just before this PC was created.
 
     const pc = new RTCPeerConnection(ICE_CONFIG);
     peersRef.current[peerId] = pc;
@@ -105,9 +106,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     };
 
     pc.ontrack = (e) => {
-      if (e.streams?.[0]) {
-        useCallStore.getState().addRemoteStream(peerId, e.streams[0]);
+      // Create a NEW MediaStream reference so React state updates reliably
+      const existingStream = useCallStore.getState().remoteStreams[peerId];
+      const newStream = new MediaStream();
+      
+      if (existingStream) {
+        existingStream.getTracks().forEach(t => newStream.addTrack(t));
       }
+      if (e.track) {
+        newStream.addTrack(e.track);
+      }
+      
+      console.log(`[WebRTC] Added track ${e.track.kind} for ${peerId}`);
+      useCallStore.getState().addRemoteStream(peerId, newStream);
     };
 
     pc.onconnectionstatechange = () => {
@@ -149,7 +160,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (isGroupCall) {
         getSocket().emit("leave-call", { roomId: callRoomId, userId: user.id });
       } else {
-        // For DM, notify peer via leave-call on the DM room
         getSocket().emit("leave-call", { roomId: callRoomId, userId: user.id });
       }
     }
@@ -186,7 +196,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     // ─ Caller: callee accepted → create offer ───────────────────
     const onAcceptCall = async ({ fromUserId, fromUserName }: any) => {
-      // Add callee as a participant so their name shows
       useCallStore.getState().upsertParticipant({ id: fromUserId, name: fromUserName || "User", isMuted: false, isSpeaking: false });
 
       const pc = createPC(fromUserId);
@@ -199,18 +208,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // ─ Call rejected ─────────────────────────────────────────────
     const onRejectCall = () => cleanupCall();
 
     // ─ Got offer (callee or group peer) → answer ─────────────────
     const onOffer = async ({ fromUserId, offer }: any) => {
-      // Add as participant if not already
       const { participants } = useCallStore.getState();
       if (!participants[fromUserId]) {
         useCallStore.getState().upsertParticipant({ id: fromUserId, name: "User", isMuted: false, isSpeaking: false });
       }
 
-      const pc = createPC(fromUserId);
+      let pc = peersRef.current[fromUserId];
+      if (!pc || pc.connectionState === "closed") {
+        pc = createPC(fromUserId);
+      }
+
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         await flushIceCandidates(pc, fromUserId);
@@ -239,13 +250,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const onIceCandidate = async ({ fromUserId, candidate }: any) => {
       if (!candidate) return;
       const pc = peersRef.current[fromUserId];
-      if (!pc) return;
-      if (pc.remoteDescription?.type) {
-        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
-      } else {
+      
+      // If PC isn't created yet or remote description isn't set, we queue the candidate
+      if (!pc || !pc.remoteDescription?.type) {
         if (!iceCandidateQueue.current[fromUserId]) iceCandidateQueue.current[fromUserId] = [];
         iceCandidateQueue.current[fromUserId].push(candidate);
+        return;
       }
+      
+      try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { console.error("ICE add fail", e); }
     };
 
     // ─ Group: existing user joined → I send offer to them ───────
