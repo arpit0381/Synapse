@@ -27,8 +27,9 @@ export function AppInitializer() {
 
   // Redirect if not authed
   useEffect(() => {
-    if (hydrated && !isAuthenticated && !pathname.startsWith("/auth")) {
-      router.push("/auth/login");
+    const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/forgot-password");
+    if (hydrated && !isAuthenticated && !isAuthRoute) {
+      router.push("/login");
     }
   }, [hydrated, isAuthenticated, pathname, router]);
 

@@ -1,9 +1,26 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import { AppInitializer } from "@/components/providers/AppInitializer";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        {/* Render a simple fallback during SSR to avoid hydration mismatch */}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <AppInitializer />
