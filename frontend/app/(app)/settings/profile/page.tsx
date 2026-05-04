@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, Camera, Mail, Lock, Save, Loader2, Check, Globe } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
@@ -16,6 +16,14 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      setName(user.name || "");
+      setBio(user.bio || "");
+      setStatusMessage(user.status_message || "");
+    }
+  }, [user]);
+
   async function handleSave() {
     if (!user) return;
     setSaving(true);
@@ -30,15 +38,54 @@ export default function ProfilePage() {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (!file.type.startsWith("image/")) { toast.error("Please select an image"); return; }
+    
+    // Check file extension instead of just type because Windows sometimes gives empty type
+    const isImage = file.type.startsWith("image/") || file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+    if (!isImage) { 
+      toast.error("Please select a valid image file"); 
+      e.target.value = ""; 
+      return; 
+    }
+
+    // Cloudinary free tier has a 10MB limit
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image is too large. Please select an image under 10MB.");
+      e.target.value = "";
+      return;
+    }
+    
     setAvatarUploading(true);
     try {
-      const urlData = await api.profiles.uploadAvatar(user.id, { filename: file.name, contentType: file.type });
-      await api.files.upload(urlData.uploadUrl, file, urlData.token);
-      updateUser({ avatar_url: urlData.publicUrl });
-      toast.success("Avatar updated!");
-    } catch (err: any) { toast.error(err.message); }
-    finally { setAvatarUploading(false); }
+      const sigRes = await api.profiles.getCloudinarySignature(user.id);
+      if (!sigRes || !sigRes.signature) throw new Error("Failed to get upload signature");
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("api_key", sigRes.apiKey);
+      formData.append("timestamp", sigRes.timestamp);
+      formData.append("signature", sigRes.signature);
+      formData.append("folder", sigRes.folder);
+      
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "dup3wsdib";
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error?.message || "Failed to upload image");
+      
+      const avatarUrl = uploadData.secure_url;
+      await api.profiles.update(user.id, { avatar_url: avatarUrl });
+      updateUser({ avatar_url: avatarUrl });
+      toast.success("Avatar updated successfully!");
+    } catch (err: any) { 
+      console.error("[Avatar Upload Error]", err);
+      toast.error(err.message || "Something went wrong uploading the avatar"); 
+    }
+    finally { 
+      setAvatarUploading(false); 
+      e.target.value = ""; // Reset input so user can pick the same file again if it failed
+    }
   }
 
   if (!user) return null;

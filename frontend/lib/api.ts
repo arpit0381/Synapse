@@ -199,6 +199,8 @@ export const api = {
       fetcher<{ profile: any }>(`/api/profiles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     uploadAvatar: (id: string, data: { filename: string; contentType: string }) =>
       fetcher<{ uploadUrl: string; token: string; publicUrl: string }>(`/api/profiles/${id}/avatar`, { method: "POST", body: JSON.stringify(data) }),
+    getCloudinarySignature: (id: string) =>
+      fetcher<{ signature: string; timestamp: string; apiKey: string; folder: string }>(`/api/profiles/${id}/cloudinary-signature`),
   },
 
   // ── Bookmarks ─────────────────────────────────────────────────────

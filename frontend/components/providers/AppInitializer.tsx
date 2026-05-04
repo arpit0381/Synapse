@@ -49,6 +49,26 @@ export function AppInitializer() {
             : workspaces[0];
           setCurrentWorkspace(ws);
         }
+
+        // Fetch latest profile
+        try {
+          const { profile } = await api.profiles.get(user!.id);
+          if (profile) {
+            useAppStore.getState().updateUser({
+              name: profile.full_name || user!.name,
+              avatar_url: profile.avatar_url,
+              bio: profile.bio,
+              username: profile.username,
+              status: profile.status,
+              status_message: profile.status_message,
+              status_text: profile.status_text,
+              status_emoji: profile.status_emoji,
+              timezone: profile.timezone,
+            });
+          }
+        } catch (e) {
+          console.error("[Init] Failed to fetch profile:", e);
+        }
       } catch (err) {
         console.error("[Init] Failed to bootstrap:", err);
       }

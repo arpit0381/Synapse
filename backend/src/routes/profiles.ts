@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import crypto from "crypto";
 import { supabaseAdmin } from "../lib/supabase";
 
 const router = Router();
@@ -77,6 +78,39 @@ router.post("/:id/avatar", async (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── GET /api/profiles/:id/cloudinary-signature ────────────────────────
+router.get("/:id/cloudinary-signature", (req: Request, res: Response) => {
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+
+  if (!apiSecret || !apiKey) {
+    res.status(500).json({ error: "Cloudinary credentials not configured" });
+    return;
+  }
+
+  const timestamp = Math.round(new Date().getTime() / 1000).toString();
+  
+  // Cloudinary signature generation
+  // 1. Create a string with the parameters to sign
+  const paramsToSign: Record<string, string> = {
+    timestamp: timestamp,
+    folder: `synapse-lite/avatars/${req.params.id}`
+  };
+
+  const sortedKeys = Object.keys(paramsToSign).sort();
+  const stringToSign = sortedKeys.map(k => `${k}=${paramsToSign[k]}`).join('&');
+  
+  // 2. Hash it with SHA-1 along with the API secret
+  const signature = crypto.createHash('sha1').update(stringToSign + apiSecret).digest('hex');
+
+  res.json({
+    signature,
+    timestamp,
+    apiKey,
+    folder: paramsToSign.folder
+  });
 });
 
 export default router;
