@@ -8,6 +8,7 @@ import { THEMES, useTheme, type Theme } from "@/components/providers/ThemeProvid
 import { cn, getInitials, stringToColor } from "@/lib/utils";
 import { useAppStore } from "@/store/appStore";
 import { api } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 const STEPS = [
   { id: 1, title: "Create your workspace", icon: Building2, description: "Set up your team's hub" },

@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Hash, Lock, MessageCircle, LayoutDashboard, CheckSquare, FolderOpen,
   Bot, Search, BarChart3, Plus, ChevronDown, ChevronRight, Users, Zap, 
-  Volume2, Inbox, MoreHorizontal, ArrowUpCircle
+  Volume2, Inbox, MoreHorizontal, ArrowUpCircle, LayoutGrid
 } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import { useCallStore } from "@/store/callStore";
@@ -30,7 +30,8 @@ const RAIL_ITEMS = [
   { icon: CheckSquare, label: "Planner", href: "/tasks" },
   { icon: Bot, label: "AI", href: "/ai-assistant" },
   { icon: Users, label: "Teams", href: "/teams" },
-  { icon: FolderOpen, label: "Docs", href: "/files" },
+  { icon: LayoutGrid, label: "Apps Hub", href: "/apps" },
+  { icon: FolderOpen, label: "Files", href: "/files" },
   { icon: BarChart3, label: "Dashboard", href: "/analytics" },
 ];
 

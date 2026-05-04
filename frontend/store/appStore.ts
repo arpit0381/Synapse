@@ -38,6 +38,14 @@ export interface PresenceInfo {
   statusEmoji: string;
 }
 
+export interface AppFile {
+  id: string;
+  type: "doc" | "sheet" | "task";
+  title: string;
+  content: string;
+  createdAt: string;
+}
+
 interface AppState {
   // Auth
   user: User | null;
@@ -72,6 +80,16 @@ interface AppState {
   setRightPanelOpen: (open: boolean) => void;
   setActiveThread: (messageId: string | null) => void;
   setCommandPaletteOpen: (open: boolean) => void;
+
+  // Apps Hub & Files
+  activeApp: "chat" | "apps-hub" | "file";
+  activeFileId: string | null;
+  files: AppFile[];
+  setActiveApp: (app: "chat" | "apps-hub" | "file") => void;
+  setActiveFileId: (id: string | null) => void;
+  addFile: (file: AppFile) => void;
+  updateFile: (id: string, updates: Partial<AppFile>) => void;
+  deleteFile: (id: string) => void;
 
   // Online users & Presence
   onlineUserIds: string[];
@@ -151,6 +169,20 @@ export const useAppStore = create<AppState>()(
       setActiveThread: (messageId) => set({ activeThread: messageId }),
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
 
+      // Apps Hub & Files
+      activeApp: "chat",
+      activeFileId: null,
+      files: [],
+      setActiveApp: (app) => set({ activeApp: app }),
+      setActiveFileId: (id) => set({ activeFileId: id }),
+      addFile: (file) => set((state) => ({ files: [...state.files, file] })),
+      updateFile: (id, updates) =>
+        set((state) => ({
+          files: state.files.map((f) => (f.id === id ? { ...f, ...updates } : f)),
+        })),
+      deleteFile: (id) =>
+        set((state) => ({ files: state.files.filter((f) => f.id !== id) })),
+
       // Online users & Presence
       onlineUserIds: [],
       presenceMap: {},
@@ -188,6 +220,7 @@ export const useAppStore = create<AppState>()(
         currentWorkspace: state.currentWorkspace,
         workspaces: state.workspaces,
         enterKeyBehavior: state.enterKeyBehavior,
+        files: state.files,
       }),
     }
   )

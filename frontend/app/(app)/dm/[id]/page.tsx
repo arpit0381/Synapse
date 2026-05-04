@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, Paperclip, Smile, Phone, Video, MoreHorizontal, Search, Check, CheckCheck, X, File, Image as ImageIcon, Download, Loader2 } from "lucide-react";
+import { Send, Paperclip, Smile, Phone, Video, MoreHorizontal, Search, Check, CheckCheck, X, File, Image as ImageIcon, Download, Loader2, FileText, Table, CheckSquare } from "lucide-react";
 import { cn, getInitials, stringToColor, formatTime, getChatDateLabel } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/appStore";
 import { useCallStore } from "@/store/callStore";
 import { api } from "@/lib/api";
@@ -24,9 +25,10 @@ const EMOJI_FULL = [
 
 export default function DmPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { user, currentWorkspace } = useAppStore();
+  const { user, currentWorkspace, addFile } = useAppStore();
   const queryClient = useQueryClient();
   const store = useCallStore();
+  const router = useRouter();
 
   // handleCall is defined below after dmUser is available
 
@@ -38,11 +40,23 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
   const [rightPanel, setRightPanel] = useState<"search" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showInputEmoji, setShowInputEmoji] = useState(false);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const slashMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (slashMenuRef.current && !slashMenuRef.current.contains(event.target as Node)) {
+        setShowSlashMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Fetch all members to find this user
   const { data: membersData } = useQuery({
@@ -370,16 +384,56 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
   };
 
   const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+    const val = e.target.value;
+    setInput(val);
+    
+    if (val === "/") {
+      setShowSlashMenu(true);
+    } else if (!val.startsWith("/")) {
+      setShowSlashMenu(false);
+    }
+
     const socket = getSocket();
     if (!socket) return;
     
-    socket.emit("dm_typing_start", { toUserId: id, userId: user?.id });
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    
-    typingTimeoutRef.current = setTimeout(() => {
+    if (val.trim() && !val.startsWith("/")) {
+      socket.emit("dm_typing_start", { toUserId: id, userId: user?.id });
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit("dm_typing_stop", { toUserId: id, userId: user?.id });
+      }, 2000);
+    } else {
       socket.emit("dm_typing_stop", { toUserId: id, userId: user?.id });
-    }, 2000);
+    }
+  };
+
+  const slashCommands: { id: "doc" | "sheet" | "task"; title: string; description: string; icon: any; color: string; bg: string }[] = [
+    { id: "doc", title: "Document", description: "Create a new document", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { id: "sheet", title: "Spreadsheet", description: "Create a new spreadsheet", icon: Table, color: "text-green-500", bg: "bg-green-500/10" },
+    { id: "task", title: "Task List", description: "Create a new task list", icon: CheckSquare, color: "text-orange-500", bg: "bg-orange-500/10" },
+  ];
+
+  const handleSlashCommand = (type: "doc" | "sheet" | "task") => {
+    setShowSlashMenu(false);
+    setInput("");
+    inputRef.current?.focus();
+    
+    const newFile = {
+      id: crypto.randomUUID(),
+      type,
+      title: `Untitled ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      content: "",
+      createdAt: new Date().toISOString(),
+    };
+    addFile(newFile);
+    
+    sendMutation.mutate({ 
+      content: `I created a new ${type}.`, 
+      metadata: { appFile: { id: newFile.id, type: newFile.type, title: newFile.title } } 
+    });
+    
+    router.push(`/apps/${type}/${newFile.id}`);
   };
 
   const groups: { label: string; messages: any[] }[] = [];
@@ -532,14 +586,25 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
         </AnimatePresence>
 
         <div className={cn("flex items-end gap-2 bg-surface border border-border/60 focus-within:border-accent/50 focus-within:ring-2 focus-within:ring-accent/15 transition-all duration-200 shadow-sm relative", (replyTo || attachment) ? "rounded-b-none rounded-t-none" : "rounded-t-2xl rounded-b-none")}>
+          {/* Smart Action Bar trigger button */}
+          <div className="pl-3 pb-[10px] flex-shrink-0 relative">
+            <button
+              onClick={() => setShowSlashMenu(!showSlashMenu)}
+              className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center hover:bg-accent hover:text-white transition-colors"
+              title="Apps Hub Options (/)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+          </div>
+
           <textarea
             ref={inputRef}
             value={input}
             onChange={handleTyping}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder={`Message ${dmUser.name}...`}
+            placeholder={`Message ${dmUser.name}... (type '/' for apps)`}
             rows={1}
-            className="flex-1 bg-transparent text-[14px] text-foreground placeholder:text-muted-foreground/60 py-3.5 px-4 resize-none outline-none max-h-[160px] leading-relaxed"
+            className="flex-1 bg-transparent text-[14px] text-foreground placeholder:text-muted-foreground/60 py-3.5 px-2 resize-none outline-none max-h-[160px] leading-relaxed"
             style={{ minHeight: "48px" }}
           />
           <div className="flex items-center gap-0.5 px-2 py-2 flex-shrink-0 self-end z-10 relative">
@@ -559,6 +624,37 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
                         className="flex items-center justify-center aspect-square text-xl hover:bg-muted rounded-xl transition-all hover:scale-110"
                       >
                         {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {showSlashMenu && (
+                <motion.div 
+                  ref={slashMenuRef}
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  className="absolute bottom-[calc(100%+10px)] left-[-40px] w-[260px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
+                >
+                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Synapse Apps Hub</div>
+                  <div className="space-y-1">
+                    {slashCommands.filter(c => !input.trim().substring(1) || c.id.includes(input.trim().substring(1).toLowerCase())).map(cmd => (
+                      <button
+                        key={cmd.id}
+                        onClick={() => handleSlashCommand(cmd.id)}
+                        className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                      >
+                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", cmd.bg, cmd.color, "group-hover:bg-accent group-hover:text-white")}>
+                          <cmd.icon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">{cmd.title}</div>
+                          <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -729,6 +825,24 @@ function MessageBubble({ msg, isMe, isLast, onRead, onReact, onReply }: any) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* App File Preview */}
+          {msg.metadata?.appFile && (
+            <div className="mt-2" onClick={(e) => {
+              e.stopPropagation();
+              window.open(`/apps/${msg.metadata.appFile.type}/${msg.metadata.appFile.id}`, '_blank');
+            }}>
+              <div className={cn("max-w-[240px] rounded-xl border p-2.5 flex items-start gap-2 shadow-sm cursor-pointer transition-colors group", isMe ? "bg-white/10 border-white/20 hover:bg-white/20" : "bg-surface border-border hover:bg-muted")}>
+                <div className={cn("p-1.5 rounded-lg flex-shrink-0 text-white", msg.metadata.appFile.type === 'doc' ? 'bg-blue-500' : msg.metadata.appFile.type === 'sheet' ? 'bg-green-500' : 'bg-orange-500')}>
+                  {msg.metadata.appFile.type === 'doc' ? <FileText className="w-4 h-4" /> : msg.metadata.appFile.type === 'sheet' ? <Table className="w-4 h-4" /> : <CheckSquare className="w-4 h-4" />}
+                </div>
+                <div className="flex-1 min-w-0 pr-1">
+                  <p className={cn("text-[12px] font-semibold truncate transition-colors", isMe ? "text-white" : "text-foreground group-hover:text-accent")}>{msg.metadata.appFile.title}</p>
+                  <p className={cn("text-[10px] opacity-80 capitalize", isMe ? "text-white/80" : "text-muted-foreground")}>{msg.metadata.appFile.type} app</p>
+                </div>
+              </div>
             </div>
           )}
           

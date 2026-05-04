@@ -7,10 +7,11 @@ import {
   Hash, Send, Paperclip, Smile, AtSign, Bot, Search,
   Pin, Users, Settings, Phone, Video, MoreHorizontal,
   Reply, Bookmark, Trash2, Check, Clock, ChevronDown,
-  X, File, Image as ImageIcon, Download, Sparkles, Loader2
+  X, File, Image as ImageIcon, Download, Sparkles, Loader2, FileText, Table, CheckSquare, Plus
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import ChatToolbar from "@/components/chat/ChatToolbar";
+import { useRouter } from "next/navigation";
 
 import { useAppStore } from "@/store/appStore";
 import { useCallStore } from "@/store/callStore";
@@ -175,6 +176,24 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
             </div>
           )}
 
+          {/* App File Preview */}
+          {msg.metadata?.appFile && (
+            <div className="mt-2" onClick={(e) => {
+              e.stopPropagation();
+              window.open(`/apps/${msg.metadata.appFile.type}/${msg.metadata.appFile.id}`, '_blank');
+            }}>
+              <div className="max-w-sm rounded-xl border border-border bg-surface p-3 flex items-start gap-3 hover:bg-muted/50 transition-all cursor-pointer shadow-sm group">
+                <div className={cn("p-2 rounded-lg text-white", msg.metadata.appFile.type === 'doc' ? 'bg-blue-500' : msg.metadata.appFile.type === 'sheet' ? 'bg-green-500' : 'bg-orange-500')}>
+                  {msg.metadata.appFile.type === 'doc' ? <FileText className="w-5 h-5" /> : msg.metadata.appFile.type === 'sheet' ? <Table className="w-5 h-5" /> : <CheckSquare className="w-5 h-5" />}
+                </div>
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className="text-sm font-semibold truncate text-foreground group-hover:text-accent transition-colors">{msg.metadata.appFile.title}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{msg.metadata.appFile.type} created via Synapse Hub</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Reactions */}
           {reactionsCount > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2 z-10">
@@ -204,9 +223,10 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
 // ── Main Page ─────────────────────────────────────────────────────────
 export default function ChannelPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { user, currentWorkspace, presenceMap, onlineUserIds, updateUnreadCount } = useAppStore();
+  const { user, currentWorkspace, presenceMap, onlineUserIds, updateUnreadCount, addFile } = useAppStore();
   const queryClient = useQueryClient();
   const callStore = useCallStore();
+  const router = useRouter();
 
   const handleCall = async (type: "audio" | "video") => {
     if (callStore.isCalling && callStore.callRoomId === id) return; // already in this call
@@ -238,11 +258,23 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
   const [rightPanel, setRightPanel] = useState<"members" | "search" | "pins" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showInputEmoji, setShowInputEmoji] = useState(false);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const slashMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (slashMenuRef.current && !slashMenuRef.current.contains(event.target as Node)) {
+        setShowSlashMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // 1. Fetch Channel Info & Members
   const { data: channelData } = useQuery({
@@ -517,13 +549,20 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
   }
 
   function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    setInput(e.target.value);
+    const val = e.target.value;
+    setInput(val);
+    
+    if (val === "/") {
+      setShowSlashMenu(true);
+    } else if (!val.startsWith("/")) {
+      setShowSlashMenu(false);
+    }
     
     // Typing indicator throttle
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
     const socket = getSocket();
-    if (e.target.value.trim()) {
+    if (val.trim() && !val.startsWith("/")) {
       socket?.emit("typing_start", { channelId: id, userId: user?.id, userName: user?.name });
       typingTimeoutRef.current = setTimeout(() => {
         socket?.emit("typing_stop", { channelId: id, userId: user?.id });
@@ -532,6 +571,34 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
       socket?.emit("typing_stop", { channelId: id, userId: user?.id });
     }
   }
+  
+  const slashCommands: { id: "doc" | "sheet" | "task"; title: string; description: string; icon: any; color: string; bg: string }[] = [
+    { id: "doc", title: "Document", description: "Create a new document", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { id: "sheet", title: "Spreadsheet", description: "Create a new spreadsheet", icon: Table, color: "text-green-500", bg: "bg-green-500/10" },
+    { id: "task", title: "Task List", description: "Create a new task list", icon: CheckSquare, color: "text-orange-500", bg: "bg-orange-500/10" },
+  ];
+
+  const handleSlashCommand = (type: "doc" | "sheet" | "task") => {
+    setShowSlashMenu(false);
+    setInput("");
+    inputRef.current?.focus();
+    
+    const newFile = {
+      id: crypto.randomUUID(),
+      type,
+      title: `Untitled ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      content: "",
+      createdAt: new Date().toISOString(),
+    };
+    addFile(newFile);
+    
+    sendMutation.mutate({ 
+      content: `I created a new ${type}.`, 
+      metadata: { appFile: { id: newFile.id, type: newFile.type, title: newFile.title } } 
+    });
+    
+    router.push(`/apps/${type}/${newFile.id}`);
+  };
   
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files[0]) {
@@ -709,14 +776,26 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
           )}
 
           <div className={cn("flex items-end gap-2 bg-surface border border-border focus-within:border-accent/80 focus-within:ring-4 focus-within:ring-accent/10 transition-all shadow-sm relative", (replyTo || attachment) ? "rounded-b-none rounded-t-none" : "rounded-t-2xl rounded-b-none")}>
+            
+            {/* Smart Action Bar trigger button */}
+            <div className="pl-3 pb-[10px] flex-shrink-0 relative">
+              <button
+                onClick={() => setShowSlashMenu(!showSlashMenu)}
+                className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center hover:bg-accent hover:text-white transition-colors"
+                title="Apps Hub Options (/)"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
             <textarea
               ref={inputRef}
               value={input}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
-              placeholder={`Message #${channel.name}`}
+              placeholder={`Message #${channel.name} (type '/' for apps)`}
               rows={1}
-              className="flex-1 bg-transparent text-[14.5px] text-foreground placeholder:text-muted-foreground py-3.5 px-4 resize-none outline-none max-h-[200px] leading-relaxed"
+              className="flex-1 bg-transparent text-[14.5px] text-foreground placeholder:text-muted-foreground py-3.5 px-2 resize-none outline-none max-h-[200px] leading-relaxed"
               style={{ minHeight: "48px" }}
             />
 
@@ -741,6 +820,37 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                           className="flex items-center justify-center aspect-square text-xl hover:bg-muted rounded-lg transition-transform hover:scale-110"
                         >
                           {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              <AnimatePresence>
+                {showSlashMenu && (
+                  <motion.div 
+                    ref={slashMenuRef}
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="absolute bottom-[calc(100%+10px)] left-[-40px] w-[260px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
+                  >
+                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Synapse Apps Hub</div>
+                    <div className="space-y-1">
+                      {slashCommands.filter(c => !input.trim().substring(1) || c.id.includes(input.trim().substring(1).toLowerCase())).map(cmd => (
+                        <button
+                          key={cmd.id}
+                          onClick={() => handleSlashCommand(cmd.id)}
+                          className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                        >
+                          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", cmd.bg, cmd.color, "group-hover:bg-accent group-hover:text-white")}>
+                            <cmd.icon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">{cmd.title}</div>
+                            <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
+                          </div>
                         </button>
                       ))}
                     </div>
