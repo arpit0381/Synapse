@@ -140,15 +140,37 @@ export default function Sidebar() {
     if (!socket || !user) return;
 
     const handleNewMessage = (msg: any) => {
-      if (pathname === `/channels/${msg.channel_id}`) return;
-      if (msg.user_id !== user.id) store.incrementUnreadCount(msg.channel_id);
+      const channelId = msg.channel_id || msg.channelId;
+      const userId = msg.user_id || msg.userId;
+      
+      if (pathname === `/channels/${channelId}`) return;
+      if (userId !== user.id) {
+        // Update Query Cache
+        queryClient.setQueryData(["channels", currentWorkspace?.id], (old: any) => {
+          if (!old?.channels) return old;
+          return {
+            ...old,
+            channels: old.channels.map((c: any) => 
+              c.id === channelId ? { ...c, unread_count: (c.unread_count || 0) + 1 } : c
+            )
+          };
+        });
+        // Also update store as fallback
+        store.incrementUnreadCount(channelId);
+      }
     };
 
     const handleNewDm = (msg: any) => {
-      if (!currentWorkspace) return;
-      const otherUserId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
+      if (!currentWorkspace || !user) return;
+      const fromId = msg.from_user_id || msg.fromUserId || msg.sender_id;
+      const toId = msg.to_user_id || msg.toUserId || msg.receiver_id;
+      
+      if (!fromId) return;
+      
+      const otherUserId = fromId === user.id ? toId : fromId;
       if (pathname === `/dm/${otherUserId}`) return;
-      if (msg.sender_id !== user.id) {
+      
+      if (fromId !== user.id) {
         queryClient.setQueryData(["dms", currentWorkspace.id], (old: any) => {
           if (!old?.conversations) return old;
           return {
@@ -163,12 +185,18 @@ export default function Sidebar() {
       }
     };
 
+    const handleNotification = () => {
+      store.setUnreadNotifications(store.unreadNotifications + 1);
+    };
+
     socket.on("new_message", handleNewMessage);
     socket.on("new_dm", handleNewDm);
+    socket.on("notification:new", handleNotification);
 
     return () => {
       socket.off("new_message", handleNewMessage);
       socket.off("new_dm", handleNewDm);
+      socket.off("notification:new", handleNotification);
     };
   }, [pathname, user, currentWorkspace, store, queryClient]);
 
@@ -308,9 +336,14 @@ export default function Sidebar() {
                   const isActive = pathname === item.href;
                   return (
                     <Link key={item.label} href={item.href}>
-                      <div className={cn("flex items-center gap-3 px-3 py-2 rounded-xl text-[14px] font-medium transition-all duration-200 group", isActive ? "bg-accent/10 text-accent font-semibold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
+                      <div className={cn("flex items-center gap-3 px-3 py-2 rounded-xl text-[14px] font-medium transition-all duration-200 group relative", isActive ? "bg-accent/10 text-accent font-semibold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
                         <item.icon className={cn("w-[18px] h-[18px] transition-transform duration-200", !isActive && "group-hover:scale-110")} />
-                        {item.label}
+                        <span className="flex-1">{item.label}</span>
+                        {item.label === "Inbox" && store.unreadNotifications > 0 && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                            {store.unreadNotifications}
+                          </span>
+                        )}
                       </div>
                     </Link>
                   );

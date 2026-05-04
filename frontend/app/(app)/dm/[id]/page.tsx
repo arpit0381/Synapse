@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, Paperclip, Smile, Phone, Video, MoreHorizontal, Search, Check, CheckCheck, X, File, Image as ImageIcon, Download, Loader2, FileText, Table, CheckSquare } from "lucide-react";
+import { Send, Paperclip, Smile, Phone, Video, MoreHorizontal, Search, Check, CheckCheck, X, File, Image as ImageIcon, Download, Loader2, FileText, Table, CheckSquare, Bot, Sparkle } from "lucide-react";
 import { cn, getInitials, stringToColor, formatTime, getChatDateLabel } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/appStore";
@@ -41,17 +41,22 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
   const [searchQuery, setSearchQuery] = useState("");
   const [showInputEmoji, setShowInputEmoji] = useState(false);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const slashMenuRef = useRef<HTMLDivElement>(null);
+  const mentionMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (slashMenuRef.current && !slashMenuRef.current.contains(event.target as Node)) {
         setShowSlashMenu(false);
+      }
+      if (mentionMenuRef.current && !mentionMenuRef.current.contains(event.target as Node)) {
+        setShowMentionMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -124,6 +129,23 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
 
   // Auto-scroll
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
+
+  // Clear unread count for this conversation
+  useEffect(() => {
+    if (currentWorkspace?.id && id) {
+      queryClient.setQueryData(["dms", currentWorkspace.id], (old: any) => {
+        if (!old?.conversations) return old;
+        return {
+          ...old,
+          conversations: old.conversations.map((c: any) => {
+            const partnerId = c.other_user?.id || c.id;
+            if (partnerId === id) return { ...c, unread: 0 };
+            return c;
+          }),
+        };
+      });
+    }
+  }, [id, currentWorkspace?.id, queryClient]);
 
   // Read Receipts logic (Intersection Observer)
   const onMessageRead = (msgId: string) => {
@@ -374,6 +396,39 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
     inputRef.current?.focus();
     
     sendMutation.mutate({ content: currentInput || " ", metadata, file: currentAttachment || undefined });
+
+    // AI Check
+    if (currentInput.toLowerCase().includes("@synapse")) {
+      const query = currentInput.replace(/@synapse/gi, "").trim();
+      const contextMessages = messages.slice(-10).map((m: any) => ({
+        role: m.metadata?.isAI ? "assistant" : "user",
+        content: m.content
+      }));
+      
+      setIsTyping(true);
+      
+      try {
+        const aiRes = await api.ai.chat({
+          messages: contextMessages,
+          workspace_id: currentWorkspace!.id,
+          user_id: user!.id
+        });
+        
+        await api.dm.send({
+          workspace_id: currentWorkspace!.id,
+          from_user_id: user!.id,
+          to_user_id: id,
+          content: aiRes.reply,
+          metadata: { isAI: true }
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["dm_messages", currentWorkspace?.id, id] });
+      } catch (err) {
+        toast.error("Synapse AI failed to respond.");
+      } finally {
+        setIsTyping(false);
+      }
+    }
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -391,6 +446,12 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
       setShowSlashMenu(true);
     } else if (!val.startsWith("/")) {
       setShowSlashMenu(false);
+    }
+
+    if (val.endsWith("@")) {
+      setShowMentionMenu(true);
+    } else if (!val.includes("@")) {
+      setShowMentionMenu(false);
     }
 
     const socket = getSocket();
@@ -632,6 +693,38 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
             </AnimatePresence>
 
             <AnimatePresence>
+              {showMentionMenu && (
+                <motion.div 
+                  ref={mentionMenuRef}
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  className="absolute bottom-[calc(100%+12px)] left-0 w-[240px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
+                >
+                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Mentions</div>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setInput(prev => prev + "synapse ");
+                        setShowMentionMenu(false);
+                        inputRef.current?.focus();
+                      }}
+                      className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">Synapse AI</div>
+                        <div className="text-[10px] text-muted-foreground">Ask anything</div>
+                      </div>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
               {showSlashMenu && (
                 <motion.div 
                   ref={slashMenuRef}
@@ -761,16 +854,17 @@ function MessageBubble({ msg, isMe, isLast, onRead, onReact, onReply }: any) {
     }
   }, [isMe, msg.is_read, msg.id]);
 
+  const isAI = msg.metadata?.isAI;
   const reactionsCount = Object.entries(msg.metadata?.reactions || {}).length;
 
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
-      className={cn("flex group w-full relative", isMe ? "justify-end" : "justify-start", !isLast && "mb-0.5")}
+      className={cn("flex group w-full relative", isMe && !isAI ? "justify-end" : "justify-start", !isLast && "mb-0.5")}
     >
       <AnimatePresence>
         {showPicker && (
           <motion.div initial={{ opacity: 0, scale: 0.85, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.85, y: 8 }}
-            className={cn("absolute z-30 -top-11 flex items-center gap-0.5 p-1.5 bg-surface/95 backdrop-blur-xl border border-border/60 shadow-2xl rounded-2xl", isMe ? "right-4" : "left-4")}
+            className={cn("absolute z-30 -top-11 flex items-center gap-0.5 p-1.5 bg-surface/95 backdrop-blur-xl border border-border/60 shadow-2xl rounded-2xl", isMe && !isAI ? "right-4" : "left-4")}
             onMouseLeave={() => setShowPicker(false)}
           >
             {EMOJI_QUICK.map(e => (
@@ -781,15 +875,21 @@ function MessageBubble({ msg, isMe, isLast, onRead, onReact, onReply }: any) {
         )}
       </AnimatePresence>
 
-      <div className={cn("max-w-[75%] relative flex flex-col", isMe ? "items-end" : "items-start")}>
+      <div className={cn("max-w-[75%] relative flex flex-col", isMe && !isAI ? "items-end" : "items-start")}>
         <div ref={ref} onDoubleClick={() => onReact(msg.id, "❤️")}
           className={cn(
             "relative px-4 py-2.5 text-[14.5px] shadow-sm transition-all duration-300 flex flex-col leading-relaxed",
             msg.justRead ? "message-glow-effect" : "",
+            isAI ? "bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 text-foreground rounded-2xl rounded-tl-none" :
             isMe ? "accent-gradient text-white rounded-2xl rounded-tr-md" : "bg-surface border border-border/40 text-foreground rounded-2xl rounded-tl-md",
-            isLast && (isMe ? "rounded-br-md" : "rounded-bl-md")
+            isLast && (isMe && !isAI ? "rounded-br-md" : "rounded-bl-md")
           )}
         >
+          {isAI && (
+            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold text-accent uppercase tracking-tighter">
+              <Bot className="w-3 h-3" /> Synapse AI <span className="bg-accent/10 px-1 rounded">AI</span>
+            </div>
+          )}
           {msg.metadata?.reply_to && (
             <div className={cn("mb-2 pl-2.5 border-l-2 text-xs rounded-r-lg py-1 px-2 -mx-1", isMe ? "border-white/40 bg-white/10" : "border-accent bg-accent/5")}>
               <div className="font-bold mb-0.5 text-[11px]">{msg.metadata.reply_to.senderName}</div>

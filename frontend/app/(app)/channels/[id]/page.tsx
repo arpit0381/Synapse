@@ -7,7 +7,7 @@ import {
   Hash, Send, Paperclip, Smile, AtSign, Bot, Search,
   Pin, Users, Settings, Phone, Video, MoreHorizontal,
   Reply, Bookmark, Trash2, Check, Clock, ChevronDown,
-  X, File, Image as ImageIcon, Download, Sparkles, Loader2, FileText, Table, CheckSquare, Plus
+  X, File, Image as ImageIcon, Download, Sparkles, Loader2, FileText, Table, CheckSquare, Plus, Sparkle
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import ChatToolbar from "@/components/chat/ChatToolbar";
@@ -67,7 +67,7 @@ function Avatar({ name, url, size = "sm" }: { name: string; url?: string; size?:
 
 function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark, onPin }: { msg: Message; isOwn: boolean; currentUserId?: string; onReact: (id: string, emoji: string) => void; onReply: () => void; onBookmark?: (id: string) => void; onPin?: (id: string) => void }) {
   const [showEmoji, setShowEmoji] = useState(false);
-  
+  const isAI = msg.metadata?.isAI;
   const isSystem = msg.userId === "system" || msg.metadata?.type === "system";
 
   if (isSystem) {
@@ -91,9 +91,9 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
   };
 
   return (
-    <div className="message-row group">
+    <div className={cn("message-row group", isOwn && !isAI ? "flex-row-reverse" : "flex-row")}>
       {/* Floating Action Bar */}
-      <div className="msg-actions">
+      <div className={cn("msg-actions", isOwn && !isAI ? "right-full mr-2" : "left-full ml-2")}>
         <div className="relative">
           <button onClick={() => setShowEmoji(!showEmoji)} className="msg-action-btn" title="React">
             <Smile className="w-4 h-4" />
@@ -123,80 +123,43 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
         </button>
       </div>
 
-      <div className="flex gap-3.5">
-        <Avatar name={msg.userName} url={msg.avatarUrl} />
-        <div className="flex-1 min-w-0">
+      <div className={cn("flex gap-3.5", isOwn && !isAI ? "flex-row-reverse text-right" : "flex-row")}>
+        <Avatar name={isAI ? "Synapse AI" : msg.userName} url={isAI ? undefined : msg.avatarUrl} />
+        <div className={cn("flex-1 min-w-0 flex flex-col", isOwn && !isAI ? "items-end" : "items-start")}>
           <div className="flex items-baseline gap-2 mb-0.5">
-            <span className="font-semibold text-[14px] text-foreground hover:underline cursor-pointer">{msg.userName}</span>
-            {msg.isPinned && <Pin className="w-3 h-3 text-accent" />}
+            <span className="font-semibold text-[14px] text-foreground hover:underline cursor-pointer flex items-center gap-1.5">
+              {isAI ? (
+                <>
+                  <Bot className="w-3.5 h-3.5 text-accent" />
+                  Synapse AI
+                  <span className="bg-accent/10 text-accent text-[9px] uppercase font-black px-1.5 py-0.5 rounded tracking-tighter">AI</span>
+                </>
+              ) : msg.userName}
+            </span>
             <span className="text-[11px] font-medium text-muted-foreground/60">{formatTime(msg.timestamp)}</span>
+            {msg.isPinned && <Pin className="w-3 h-3 text-accent" />}
           </div>
           
-          {msg.metadata?.reply_to && (
-            <div className="mb-2 flex items-start gap-2 pl-2.5 border-l-2 border-accent/40 text-xs rounded-r-lg py-1.5 px-2 bg-accent/5 cursor-pointer hover:bg-accent/10 transition-colors -ml-0.5">
-              <div>
-                <div className="font-bold mb-0.5 text-accent text-[11px]">{msg.metadata.reply_to.senderName}</div>
-                <div className="truncate max-w-[400px] text-muted-foreground">{msg.metadata.reply_to.content}</div>
+          <div className={cn(
+            "relative px-4 py-2.5 text-[14.5px] leading-[1.65] whitespace-pre-wrap break-words rounded-2xl shadow-sm",
+            isAI ? "bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 text-foreground rounded-tl-none" :
+            isOwn ? "accent-gradient text-white rounded-tr-none" : 
+                   "bg-surface border border-border/60 text-foreground rounded-tl-none shadow-sm"
+          )}>
+            {msg.metadata?.reply_to && (
+              <div className={cn("mb-2 flex items-start gap-2 pl-2.5 border-l-2 text-xs rounded-r-lg py-1.5 px-2 transition-colors -ml-0.5", isOwn && !isAI ? "border-white/40 bg-white/10" : "border-accent/40 bg-accent/5")}>
+                <div>
+                  <div className={cn("font-bold mb-0.5 text-[11px]", isOwn && !isAI ? "text-white" : "text-accent")}>{msg.metadata.reply_to.senderName}</div>
+                  <div className={cn("truncate max-w-[400px]", isOwn && !isAI ? "text-white/80" : "text-muted-foreground")}>{msg.metadata.reply_to.content}</div>
+                </div>
               </div>
-            </div>
-          )}
-
-          <div className="text-[14.5px] text-foreground/90 leading-[1.65] whitespace-pre-wrap break-words">
+            )}
             {msg.content}
           </div>
           
-          {/* Attachment Preview */}
-          {msg.metadata?.attachment && (
-            <div className="mt-2 relative">
-              {msg.metadata.attachment.type?.includes('image') && msg.metadata.attachment.url ? (
-                <div className="relative inline-block">
-                  <a href={msg.metadata.attachment.isUploading ? "#" : msg.metadata.attachment.url} target={msg.metadata.attachment.isUploading ? "_self" : "_blank"} rel="noopener noreferrer" className={cn("block max-w-[400px] rounded-xl overflow-hidden border border-border/30 mt-1 bg-black/5 hover:opacity-90 transition-opacity shadow-sm", msg.metadata.attachment.isUploading && "opacity-60 pointer-events-none blur-[1px]")}>
-                    <img src={msg.metadata.attachment.url} alt={msg.metadata.attachment.name || "Image attachment"} className="w-full h-auto object-contain max-h-[300px]" />
-                  </a>
-                  {msg.metadata.attachment.isUploading && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-black/60 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 text-white font-medium shadow-xl"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-xs">Uploading...</span></div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className={cn("relative inline-block", msg.metadata.attachment.isUploading && "opacity-70 pointer-events-none")}>
-                  <div className="max-w-sm rounded-xl border border-border bg-surface/80 p-3 flex items-start gap-3 hover:bg-muted/50 transition-all cursor-pointer shadow-sm" onClick={() => { if(msg.metadata.attachment.url && !msg.metadata.attachment.isUploading) window.open(msg.metadata.attachment.url, '_blank'); }}>
-                    <div className="p-2 rounded-lg bg-accent/10 text-accent">{msg.metadata.attachment.isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <File className="w-5 h-5" />}</div>
-                    <div className="flex-1 min-w-0 pr-4">
-                      <p className="text-sm font-semibold truncate text-foreground">{msg.metadata.attachment.name || "Attachment"}</p>
-                      <p className="text-xs text-muted-foreground">{msg.metadata.attachment.size ? (msg.metadata.attachment.size / 1024).toFixed(1) + " KB • " : ""}{msg.metadata.attachment.type?.split('/')[1]?.toUpperCase() || "FILE"}</p>
-                    </div>
-                    {msg.metadata.attachment.url && !msg.metadata.attachment.isUploading && (
-                      <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-background rounded-lg transition-colors btn-press" onClick={(e) => { e.stopPropagation(); window.open(msg.metadata.attachment.url, '_blank'); }}><Download className="w-4 h-4" /></button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* App File Preview */}
-          {msg.metadata?.appFile && (
-            <div className="mt-2" onClick={(e) => {
-              e.stopPropagation();
-              window.open(`/apps/${msg.metadata.appFile.type}/${msg.metadata.appFile.id}`, '_blank');
-            }}>
-              <div className="max-w-sm rounded-xl border border-border bg-surface p-3 flex items-start gap-3 hover:bg-muted/50 transition-all cursor-pointer shadow-sm group">
-                <div className={cn("p-2 rounded-lg text-white", msg.metadata.appFile.type === 'doc' ? 'bg-blue-500' : msg.metadata.appFile.type === 'sheet' ? 'bg-green-500' : 'bg-orange-500')}>
-                  {msg.metadata.appFile.type === 'doc' ? <FileText className="w-5 h-5" /> : msg.metadata.appFile.type === 'sheet' ? <Table className="w-5 h-5" /> : <CheckSquare className="w-5 h-5" />}
-                </div>
-                <div className="flex-1 min-w-0 pr-4">
-                  <p className="text-sm font-semibold truncate text-foreground group-hover:text-accent transition-colors">{msg.metadata.appFile.title}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{msg.metadata.appFile.type} created via Synapse Hub</p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Reactions */}
           {reactionsCount > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2 z-10">
+            <div className={cn("flex flex-wrap gap-1.5 mt-2 z-10", isOwn && !isAI && "flex-row-reverse")}>
               {Object.entries(msg.reactions!).map(([emoji, users]) => (
                 <button
                   key={emoji}
@@ -259,17 +222,22 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
   const [searchQuery, setSearchQuery] = useState("");
   const [showInputEmoji, setShowInputEmoji] = useState(false);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const slashMenuRef = useRef<HTMLDivElement>(null);
+  const mentionMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (slashMenuRef.current && !slashMenuRef.current.contains(event.target as Node)) {
         setShowSlashMenu(false);
+      }
+      if (mentionMenuRef.current && !mentionMenuRef.current.contains(event.target as Node)) {
+        setShowMentionMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -285,8 +253,21 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
 
   // Clear unread count when channel is opened
   useEffect(() => {
-    updateUnreadCount(id, 0);
-  }, [id, updateUnreadCount]);
+    if (id && currentWorkspace?.id) {
+      updateUnreadCount(id, 0);
+      
+      // Also clear in query cache
+      queryClient.setQueryData(["channels", currentWorkspace.id], (old: any) => {
+        if (!old?.channels) return old;
+        return {
+          ...old,
+          channels: old.channels.map((c: any) => 
+            c.id === id ? { ...c, unread_count: 0 } : c
+          )
+        };
+      });
+    }
+  }, [id, currentWorkspace?.id, updateUnreadCount, queryClient]);
 
   const { data: membersData } = useQuery({
     queryKey: ["channel_members", id],
@@ -539,6 +520,43 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
     inputRef.current?.focus();
     
     sendMutation.mutate({ content: currentInput || " ", metadata, file: currentAttachment || undefined });
+
+    // AI Check
+    if (currentInput.toLowerCase().includes("@synapse")) {
+      const query = currentInput.replace(/@synapse/gi, "").trim();
+      const contextMessages = rawMessages.slice(-10).map((m: any) => ({
+        role: m.metadata?.isAI ? "assistant" : "user",
+        content: m.content
+      }));
+      
+      setTypingUsers(prev => ({ ...prev, "ai": "Synapse AI" }));
+      
+      try {
+        const aiRes = await api.ai.chat({
+          messages: contextMessages,
+          workspace_id: currentWorkspace!.id,
+          channel_id: id,
+          user_id: user!.id
+        });
+        
+        await api.messages.send({
+          channel_id: id,
+          content: aiRes.reply,
+          user_id: user!.id,
+          metadata: { isAI: true }
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["messages", id] });
+      } catch (err) {
+        toast.error("Synapse AI failed to respond.");
+      } finally {
+        setTypingUsers(prev => {
+          const next = { ...prev };
+          delete next["ai"];
+          return next;
+        });
+      }
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -556,6 +574,12 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
       setShowSlashMenu(true);
     } else if (!val.startsWith("/")) {
       setShowSlashMenu(false);
+    }
+
+    if (val.endsWith("@")) {
+      setShowMentionMenu(true);
+    } else if (!val.includes("@")) {
+      setShowMentionMenu(false);
     }
     
     // Typing indicator throttle
@@ -822,6 +846,38 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                           {emoji}
                         </button>
                       ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {showMentionMenu && (
+                  <motion.div 
+                    ref={mentionMenuRef}
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="absolute bottom-[calc(100%+10px)] left-0 w-[240px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
+                  >
+                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Mentions</div>
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          setInput(prev => prev + "synapse ");
+                          setShowMentionMenu(false);
+                          inputRef.current?.focus();
+                        }}
+                        className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                          <Bot className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">Synapse AI</div>
+                          <div className="text-[10px] text-muted-foreground">Ask anything</div>
+                        </div>
+                      </button>
                     </div>
                   </motion.div>
                 )}
