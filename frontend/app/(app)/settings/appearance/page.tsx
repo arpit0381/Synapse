@@ -23,87 +23,110 @@ export default function AppearanceSettingsPage() {
   const [saved, setSaved] = useState(false);
 
   return (
-    <div className="max-w-2xl mx-auto px-8 py-8">
-      <h1 className="font-display font-bold text-xl text-foreground mb-6">Appearance</h1>
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+      <div>
+        <h1 className="font-display font-black text-2xl md:text-4xl tracking-tight flex items-center gap-3 text-foreground">
+          <div className="p-2 md:p-2.5 rounded-2xl bg-accent/10">
+            <Palette className="w-6 h-6 md:w-8 md:h-8 text-accent" />
+          </div>
+          Appearance
+        </h1>
+        <p className="text-sm font-medium text-muted-foreground mt-2 md:mt-3 px-1">Customize your visual experience and interface themes</p>
+      </div>
 
-      {/* Theme Selection */}
-      <section className="mb-8">
-        <h2 className="text-sm font-semibold text-foreground mb-3">Theme</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {THEME_CONFIG.map(t => (
-            <button key={t.id} onClick={() => setTheme(t.id)}
-              className={cn("relative flex flex-col gap-3 p-4 rounded-xl border transition-all text-left",
-                theme === t.id ? "border-accent bg-accent/5 shadow-accent-glow" : "border-border bg-surface hover:border-accent/40 hover:bg-muted/30")}>
-              {/* Preview swatch */}
-              <div className="w-full h-16 rounded-lg overflow-hidden flex gap-1 p-1" style={{ backgroundColor: t.preview.bg }}>
-                <div className="w-8 flex-shrink-0 rounded" style={{ backgroundColor: t.preview.surface }} />
-                <div className="flex-1 rounded flex flex-col gap-1 p-1">
-                  {[1, 2, 3].map(i => <div key={i} className="h-1.5 rounded-full" style={{ backgroundColor: i === 1 ? t.preview.accent : t.preview.surface, width: i === 1 ? "60%" : i === 2 ? "80%" : "40%" }} />)}
-                </div>
-                <div className="w-3 h-3 rounded-full self-start mt-0.5 flex-shrink-0" style={{ backgroundColor: t.preview.accent }} />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+        {/* Left Column: Themes */}
+        <div className="lg:col-span-8 space-y-6 md:space-y-8">
+          <section>
+            <h3 className="font-bold text-[15px] mb-4 flex items-center gap-2 px-1">
+              <Monitor className="w-4 h-4 text-accent" /> Interface Themes
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {THEME_CONFIG.map(t => (
+                <button key={t.id} onClick={() => setTheme(t.id)}
+                  className={cn("relative flex flex-col gap-4 p-5 rounded-[24px] border transition-all text-left group overflow-hidden",
+                    theme === t.id ? "border-accent bg-accent/5 shadow-lg shadow-accent/10" : "border-border/60 bg-surface/50 hover:border-accent/40 hover:bg-muted/30")}>
+                  {/* Preview swatch */}
+                  <div className="w-full h-24 rounded-2xl overflow-hidden flex gap-2 p-2 shadow-inner group-hover:scale-[1.02] transition-transform" style={{ backgroundColor: t.preview.bg }}>
+                    <div className="w-12 flex-shrink-0 rounded-xl" style={{ backgroundColor: t.preview.surface }} />
+                    <div className="flex-1 rounded-xl flex flex-col gap-2 p-2">
+                      {[1, 2, 3].map(i => <div key={i} className="h-2 rounded-full" style={{ backgroundColor: i === 1 ? t.preview.accent : t.preview.surface, width: i === 1 ? "60%" : i === 2 ? "80%" : "40%", opacity: 0.6 }} />)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                      {t.icon}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{t.name}</p>
+                      <p className="text-[11px] font-medium text-muted-foreground opacity-60">{t.desc}</p>
+                    </div>
+                  </div>
+                  {theme === t.id && (
+                    <div className="absolute top-4 right-4 w-6 h-6 bg-accent rounded-full flex items-center justify-center shadow-lg shadow-accent/20">
+                      <Check className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* Right Column: Preferences */}
+        <div className="lg:col-span-4 space-y-6 md:space-y-8">
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-surface/50 backdrop-blur-sm border border-border/60 rounded-[24px] p-6 md:p-8 space-y-8 shadow-sm">
+            {/* Font Size */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Type className="w-4 h-4 text-accent" />
+                <h3 className="font-bold text-[15px]">Typography</h3>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-accent">{t.icon}</span>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.desc}</p>
-                </div>
+              <div className="flex gap-2 p-1 bg-muted/30 rounded-xl">
+                {FONT_SIZES.map(size => (
+                  <button key={size} onClick={() => setFontSize(size)}
+                    className={cn("flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all",
+                      fontSize === size ? "bg-accent text-white shadow-lg shadow-accent/20" : "text-muted-foreground hover:text-foreground")}>
+                    {size}
+                  </button>
+                ))}
               </div>
-              {theme === t.id && (
-                <div className="absolute top-3 right-3 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
-                  <Check className="w-3 h-3 text-white" />
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-      </section>
+              <div className="mt-4 p-4 bg-background/50 border border-border/30 rounded-2xl">
+                <p className={cn("text-foreground font-medium transition-all", fontSize === "Small" ? "text-xs" : fontSize === "Large" ? "text-lg" : "text-sm")}>
+                  The quick brown fox jumps over the lazy dog.
+                </p>
+              </div>
+            </section>
 
-      {/* Font Size */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <Type className="w-4 h-4 text-accent" />
-          <h2 className="text-sm font-semibold text-foreground">Font Size</h2>
-        </div>
-        <div className="flex gap-2">
-          {FONT_SIZES.map(size => (
-            <button key={size} onClick={() => setFontSize(size)}
-              className={cn("flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all",
-                fontSize === size ? "border-accent bg-accent/10 text-accent" : "border-border bg-surface text-muted-foreground hover:text-foreground hover:border-accent/30")}>
-              {size}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 p-3 bg-muted rounded-lg">
-          <p className={cn("text-foreground leading-relaxed", fontSize === "Small" ? "text-xs" : fontSize === "Large" ? "text-base" : "text-sm")}>
-            Preview: The quick brown fox jumps over the lazy dog.
-          </p>
-        </div>
-      </section>
+            {/* Density */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <LayoutTemplate className="w-4 h-4 text-accent" />
+                <h3 className="font-bold text-[15px]">Interface Density</h3>
+              </div>
+              <div className="flex flex-col gap-2">
+                {DENSITY_OPTIONS.map(d => (
+                  <button key={d} onClick={() => setDensity(d)}
+                    className={cn("flex items-center justify-between px-4 py-3 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all",
+                      density === d ? "border-accent bg-accent/5 text-accent" : "border-border/40 bg-background/50 text-muted-foreground hover:text-foreground hover:border-accent/30")}>
+                    {d}
+                    {density === d && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                ))}
+              </div>
+            </section>
 
-      {/* Density */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <LayoutTemplate className="w-4 h-4 text-accent" />
-          <h2 className="text-sm font-semibold text-foreground">Chat Density</h2>
+            <div className="pt-4 border-t border-border/30">
+              <button 
+                onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }}
+                className={cn("w-full flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl text-[13px] font-bold uppercase tracking-widest transition-all btn-press",
+                  saved ? "bg-green-500 text-white shadow-lg shadow-green-500/20" : "accent-gradient text-white shadow-xl shadow-accent/20")}
+              >
+                {saved ? <><Check className="w-4 h-4" /> Preferences Saved</> : "Apply Changes"}
+              </button>
+            </div>
+          </motion.div>
         </div>
-        <div className="flex gap-2">
-          {DENSITY_OPTIONS.map(d => (
-            <button key={d} onClick={() => setDensity(d)}
-              className={cn("flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all",
-                density === d ? "border-accent bg-accent/10 text-accent" : "border-border bg-surface text-muted-foreground hover:text-foreground hover:border-accent/30")}>
-              {d}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <div className="flex justify-end">
-        <motion.button onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-          className={cn("flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all",
-            saved ? "bg-green-500/20 text-green-400 border border-green-500/30" : "accent-gradient text-white shadow-accent-glow")}>
-          {saved ? <><Check className="w-4 h-4" /> Saved!</> : "Save Preferences"}
-        </motion.button>
       </div>
     </div>
   );

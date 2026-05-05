@@ -91,53 +91,100 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <div>
-        <h1 className="font-display font-bold text-2xl tracking-tight flex items-center gap-2"><User className="w-6 h-6 text-accent" />Profile Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your personal information and preferences</p>
+        <h1 className="font-display font-black text-2xl md:text-4xl tracking-tight flex items-center gap-3 text-foreground">
+          <div className="p-2 md:p-2.5 rounded-2xl bg-accent/10">
+            <User className="w-6 h-6 md:w-8 md:h-8 text-accent" />
+          </div>
+          Profile Settings
+        </h1>
+        <p className="text-sm font-medium text-muted-foreground mt-2 md:mt-3 px-1">Manage your personal information and preferences</p>
       </div>
 
-      {/* Avatar Section */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface border border-border rounded-2xl p-6">
-        <h3 className="font-semibold text-sm mb-4">Profile Picture</h3>
-        <div className="flex items-center gap-5">
-          <div className="relative group">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold text-white overflow-hidden" style={{ backgroundColor: user.avatar_url ? "transparent" : stringToColor(user.name) }}>
-              {user.avatar_url ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(user.name)}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+        <div className="lg:col-span-4 space-y-6 md:space-y-8">
+          {/* Avatar Section */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface/50 backdrop-blur-sm border border-border/60 rounded-[24px] p-6 md:p-8 shadow-sm">
+            <h3 className="font-bold text-[15px] mb-6 flex items-center gap-2">
+              <Camera className="w-4 h-4 text-accent" /> Profile Picture
+            </h3>
+            <div className="flex flex-col items-center gap-6">
+              <div className="relative group">
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-[32px] flex items-center justify-center text-3xl font-bold text-white overflow-hidden shadow-xl transition-transform group-hover:scale-[1.02]" style={{ backgroundColor: user.avatar_url ? "transparent" : stringToColor(user.name) }}>
+                  {user.avatar_url ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(user.name)}
+                </div>
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-[32px] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-[2px]">
+                  {avatarUploading ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={avatarUploading} />
+                </label>
+              </div>
+              <div className="text-center">
+                <p className="text-base font-bold text-foreground">{user.name}</p>
+                <p className="text-xs font-semibold text-muted-foreground opacity-60">@{user.username || "user"}</p>
+                <p className="text-[11px] text-accent font-bold mt-2 uppercase tracking-widest opacity-80">Click avatar to change</p>
+              </div>
             </div>
-            <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-              {avatarUploading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Camera className="w-5 h-5 text-white" />}
-              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={avatarUploading} />
-            </label>
-          </div>
-          <div><p className="text-sm font-medium">{user.name}</p><p className="text-xs text-muted-foreground">@{user.username || "user"}</p><p className="text-xs text-muted-foreground mt-1">Click avatar to change</p></div>
+          </motion.div>
         </div>
-      </motion.div>
 
-      {/* Profile Info */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-surface border border-border rounded-2xl p-6 space-y-5">
-        <h3 className="font-semibold text-sm">Personal Information</h3>
-        <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">Display Name</label><input value={name} onChange={e => setName(e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50" /></div>
-        <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">Email</label><div className="flex items-center gap-2 px-3 py-2.5 bg-muted/30 border border-border rounded-lg text-sm text-muted-foreground"><Mail className="w-4 h-4" />{user.email}</div></div>
-        <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Tell your team about yourself…" className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-accent/50 resize-none" /></div>
-        <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status Message</label><input value={statusMessage} onChange={e => setStatusMessage(e.target.value)} placeholder="e.g. In a meeting…" className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-accent/50" /></div>
-      </motion.div>
+        <div className="lg:col-span-8 space-y-6 md:space-y-8">
+          {/* Profile Info */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-surface/50 backdrop-blur-sm border border-border/60 rounded-[24px] p-6 md:p-8 space-y-6 shadow-sm">
+            <h3 className="font-bold text-[15px] flex items-center gap-2 border-b border-border/30 pb-4">
+              <Globe className="w-4 h-4 text-accent" /> Personal Information
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block opacity-70">Display Name</label>
+                <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-background/50 border border-border/40 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all" />
+              </div>
+              <div>
+                <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block opacity-70">Email Address</label>
+                <div className="flex items-center gap-3 px-4 py-3 bg-muted/20 border border-border/30 rounded-xl text-sm font-medium text-muted-foreground select-none">
+                  <Mail className="w-4 h-4 opacity-50" />
+                  {user.email}
+                </div>
+              </div>
+            </div>
 
-      {/* Preferences */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-surface border border-border rounded-2xl p-6 space-y-4">
-        <h3 className="font-semibold text-sm">Preferences</h3>
-        <div className="flex items-center justify-between">
-          <div><p className="text-sm font-medium">Enter key behavior</p><p className="text-xs text-muted-foreground">What happens when you press Enter in chat</p></div>
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
-            <button onClick={() => setEnterKeyBehavior("send")} className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors", enterKeyBehavior === "send" ? "bg-accent text-white" : "text-muted-foreground")}>Send</button>
-            <button onClick={() => setEnterKeyBehavior("newline")} className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors", enterKeyBehavior === "newline" ? "bg-accent text-white" : "text-muted-foreground")}>New Line</button>
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block opacity-70">Bio</label>
+              <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Tell your team about yourself…" className="w-full bg-background/50 border border-border/40 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all resize-none" />
+            </div>
+            
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block opacity-70">Status Message</label>
+              <input value={statusMessage} onChange={e => setStatusMessage(e.target.value)} placeholder="e.g. In a meeting…" className="w-full bg-background/50 border border-border/40 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all" />
+            </div>
+          </motion.div>
+
+          {/* Preferences */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-surface/50 backdrop-blur-sm border border-border/60 rounded-[24px] p-6 md:p-8 space-y-6 shadow-sm">
+            <h3 className="font-bold text-[15px] flex items-center gap-2 border-b border-border/30 pb-4">
+              <Settings className="w-4 h-4 text-accent" /> Chat Preferences
+            </h3>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-foreground">Enter key behavior</p>
+                <p className="text-xs font-medium text-muted-foreground opacity-60">Control what happens when you press Enter in the chat box</p>
+              </div>
+              <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl w-fit">
+                <button onClick={() => setEnterKeyBehavior("send")} className={cn("px-5 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all duration-200", enterKeyBehavior === "send" ? "bg-accent text-white shadow-lg shadow-accent/20" : "text-muted-foreground hover:text-foreground")}>Send</button>
+                <button onClick={() => setEnterKeyBehavior("newline")} className={cn("px-5 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all duration-200", enterKeyBehavior === "newline" ? "bg-accent text-white shadow-lg shadow-accent/20" : "text-muted-foreground hover:text-foreground")}>New Line</button>
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="flex justify-end pt-4">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-3 px-8 py-4 accent-gradient text-white rounded-[18px] font-bold text-sm hover:scale-[1.02] transition-all shadow-xl shadow-accent/20 disabled:opacity-50 btn-press">
+              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              {saving ? "SAVING..." : "SAVE CHANGES"}
+            </button>
           </div>
         </div>
-      </motion.div>
-
-      <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 accent-gradient text-white rounded-xl font-medium text-sm hover:opacity-90 transition-opacity shadow-lg disabled:opacity-50">
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}{saving ? "Saving…" : "Save Changes"}
-      </button>
+      </div>
     </div>
   );
 }

@@ -88,36 +88,36 @@ export default function DashboardPage() {
   const displayChannels = channels.slice(0, 4);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 animate-fade-in pb-12">
       {/* ── Greeting Header ── */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <motion.h1
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="font-display text-2xl font-bold text-foreground"
+            className="font-display text-2xl md:text-4xl font-black text-foreground tracking-tight"
           >
             {greeting}, {displayUser.name.split(" ")[0]} {emoji}
           </motion.h1>
-          <p className="text-muted-foreground mt-1">
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-            {" · "}You have <span className="text-accent font-medium">{tasks.length} tasks</span>
+          <p className="text-sm font-medium text-muted-foreground mt-2 md:mt-3 px-1">
+            <span className="hidden sm:inline">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · </span>
+            You have <span className="text-accent font-bold">{tasks.length} active tasks</span>
           </p>
         </div>
         <Link href="/tasks">
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl accent-gradient text-white text-sm font-semibold shadow-accent-glow"
+            className="w-full md:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl accent-gradient text-white text-sm font-bold shadow-xl shadow-accent/20 btn-press"
           >
-            <Plus className="w-4 h-4" />
-            New Task
+            <Plus className="w-5 h-5" />
+            NEW TASK
           </motion.button>
         </Link>
       </div>
 
       {/* ── Stats Grid ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {loading
           ? Array(4).fill(0).map((_, i) => <StatSkeleton key={i} />)
           : MOCK_STATS.map((stat, i) => (
@@ -126,23 +126,23 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
-              className="bg-surface border border-border rounded-xl p-4 hover:border-accent/30 transition-colors"
+              className="bg-surface/50 backdrop-blur-sm border border-border/60 rounded-[22px] p-5 md:p-6 hover:border-accent/40 transition-all duration-300 group shadow-sm hover:shadow-lg hover:shadow-accent/5"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="p-2 rounded-lg bg-accent/10">
-                  <stat.icon className="w-4 h-4 text-accent" />
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-accent/10 text-accent transition-colors group-hover:bg-accent group-hover:text-white">
+                  <stat.icon className="w-5 h-5" />
                 </div>
                 <span className={cn(
-                  "text-xs px-2 py-0.5 rounded-full",
-                  stat.trend === "up" ? "bg-green-500/10 text-green-400" :
-                  stat.trend === "warn" ? "bg-orange-500/10 text-orange-400" :
-                  "bg-muted text-muted-foreground"
+                  "text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all",
+                  stat.trend === "up" ? "bg-green-500/10 text-green-400 border-green-500/20" :
+                  stat.trend === "warn" ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
+                  "bg-muted/50 text-muted-foreground border-border/40"
                 )}>
                   {stat.change}
                 </span>
               </div>
-              <div className="font-display text-3xl font-bold text-foreground mb-1">{stat.value}</div>
-              <div className="text-xs text-muted-foreground">{stat.label}</div>
+              <div className="font-display text-3xl md:text-4xl font-black text-foreground mb-1 group-hover:scale-105 transition-transform origin-left">{stat.value}</div>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">{stat.label}</div>
             </motion.div>
           ))
         }

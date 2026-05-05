@@ -781,44 +781,42 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
     <div className="flex h-full w-full relative">
       <div className="flex flex-col flex-1 h-full bg-background relative min-w-0">
         {/* ── TopBar ── */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-border/40 glass-strong flex-shrink-0 z-20 sticky top-0">
+        <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-border/40 glass-strong flex-shrink-0 z-20 sticky top-0 h-16 md:h-20">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-              <Hash className="w-4 h-4 text-accent" />
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+              <Hash className="w-5 h-5 text-accent" />
             </div>
             <div className="flex flex-col min-w-0">
-              <h2 className="font-display font-bold text-foreground text-[15px] truncate tracking-tight">{channel.name}</h2>
+              <h2 className="font-display font-black text-foreground text-[14px] md:text-[16px] truncate tracking-tight">{channel.name}</h2>
               {channel.description && (
-                <p className="text-[11px] text-muted-foreground truncate hidden sm:block">{channel.description}</p>
+                <p className="text-[10px] md:text-[11px] text-muted-foreground truncate font-medium uppercase tracking-wider opacity-60 hidden xs:block">{channel.description}</p>
               )}
             </div>
           </div>
 
-          {/* Active members stack */}
-          {membersData?.members && (
-            <div className="hidden md:flex items-center -space-x-2 mr-2">
-              {membersData.members.slice(0, 4).map((m: any) => {
-                const isOn = onlineUserIds.includes(m.id);
-                return (
-                  <div key={m.id} className={cn("w-7 h-7 rounded-full border-2 border-surface flex items-center justify-center text-[9px] font-bold text-white transition-all", isOn ? "ring-1 ring-green-500/40" : "opacity-60")} style={{ backgroundColor: stringToColor(m.full_name || m.username || "U") }} title={m.full_name || m.username}>
-                    {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full rounded-full object-cover" /> : getInitials(m.full_name || m.username || "U")}
+          <div className="flex items-center gap-0.5 sm:gap-1.5">
+            {/* Active members stack */}
+            {membersData?.members && (
+              <div className="hidden sm:flex items-center -space-x-2 mr-2">
+                {membersData.members.slice(0, 3).map((m: any) => (
+                  <div key={m.id} className="w-7 h-7 rounded-lg border-2 border-surface overflow-hidden shadow-sm ring-1 ring-border/20" title={m.full_name}>
+                    {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] font-black text-white" style={{ backgroundColor: stringToColor(m.full_name || m.username) }}>{getInitials(m.full_name || m.username)}</div>}
                   </div>
-                );
-              })}
-              {membersData.members.length > 4 && (
-                <div className="w-7 h-7 rounded-full border-2 border-surface bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">+{membersData.members.length - 4}</div>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button onClick={async () => { if (isSummarizing) return; setIsSummarizing(true); try { const data = await api.ai.summarize({ messages: displayMessages.map(m => ({ user: m.userName, content: m.content })), channel_name: channel.name }); setAiSummary(data.summary); } catch (e) { console.error(e); } finally { setIsSummarizing(false); } }} className={cn("p-2 rounded-lg transition-all btn-press", isSummarizing ? "text-accent animate-pulse" : "text-muted-foreground hover:text-accent hover:bg-accent/10")} title="AI Summarize">{isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}</button>
-            <button onClick={() => handleCall("audio")} className="p-2 rounded-lg text-muted-foreground hover:text-green-400 hover:bg-green-500/10 transition-all btn-press" title="Audio Call"><Phone className="w-4 h-4" /></button>
-            <button onClick={() => handleCall("video")} className="p-2 rounded-lg text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 transition-all btn-press" title="Video Call"><Video className="w-4 h-4" /></button>
-            <div className="w-px h-5 bg-border/40 mx-1" />
-            <button onClick={() => setRightPanel(rightPanel === "pins" ? null : "pins")} className={cn("p-2 rounded-lg transition-all btn-press", rightPanel === "pins" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")} title="Pins"><Pin className="w-4 h-4" /></button>
-            <button onClick={() => setRightPanel(rightPanel === "search" ? null : "search")} className={cn("p-2 rounded-lg transition-all btn-press", rightPanel === "search" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")} title="Search"><Search className="w-4 h-4" /></button>
-            <button onClick={() => setRightPanel(rightPanel === "members" ? null : "members")} className={cn("p-2 rounded-lg transition-all btn-press", rightPanel === "members" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:text-foreground hover:bg-muted")} title="Members"><Users className="w-4 h-4" /></button>
+                ))}
+                {membersData.members.length > 3 && (
+                  <div className="w-7 h-7 rounded-lg border-2 border-surface bg-muted flex items-center justify-center text-[9px] font-black text-muted-foreground shadow-sm ring-1 ring-border/20">
+                    +{membersData.members.length - 3}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <button onClick={() => setRightPanel(rightPanel === "members" ? null : "members")} className={cn("p-2 rounded-xl transition-all duration-200", rightPanel === "members" ? "bg-accent/15 text-accent shadow-sm" : "text-muted-foreground hover:bg-muted")}><Users className="w-[18px] h-[18px]" /></button>
+            <button onClick={() => handleCall("audio")} className="p-2 rounded-xl text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-200"><Phone className="w-[18px] h-[18px]" /></button>
+            <button onClick={() => handleCall("video")} className="p-2 rounded-xl text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-all duration-200"><Video className="w-[18px] h-[18px]" /></button>
+            <div className="w-px h-5 bg-border/40 mx-0.5" />
+            <button onClick={() => setRightPanel(rightPanel === "search" ? null : "search")} className={cn("p-2 rounded-xl transition-all duration-200", rightPanel === "search" ? "bg-accent/15 text-accent shadow-sm" : "text-muted-foreground hover:bg-muted")}><Search className="w-[18px] h-[18px]" /></button>
+            <button className="p-2 rounded-xl text-muted-foreground hover:bg-muted transition-all duration-200"><MoreHorizontal className="w-[18px] h-[18px]" /></button>
           </div>
         </div>
 
@@ -1009,7 +1007,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                     <span className="text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full font-bold ml-auto">@{mentionQuery}</span>
                   )}
                 </div>
-                <div className="max-h-[280px] overflow-y-auto p-1.5 space-y-0.5 chat-scroll">
+                <div className="max-h-[320px] overflow-y-auto p-1.5 space-y-0.5 chat-scroll">
                   <button
                     onClick={() => insertMention("synapse")}
                     className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
@@ -1022,7 +1020,6 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                       <div className="text-[10px] text-muted-foreground">Ask anything</div>
                     </div>
                   </button>
-
                   <button
                     onClick={() => insertMention("everyone")}
                     className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
@@ -1031,7 +1028,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                       <Users className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">Everyone</div>
+                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">everyone</div>
                       <div className="text-[10px] text-muted-foreground">Notify all members</div>
                     </div>
                   </button>
@@ -1044,8 +1041,8 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                       <Hash className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">Channel</div>
-                      <div className="text-[10px] text-muted-foreground">Notify active members</div>
+                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">channel</div>
+                      <div className="text-[10px] text-muted-foreground">Notify in this channel</div>
                     </div>
                   </button>
 

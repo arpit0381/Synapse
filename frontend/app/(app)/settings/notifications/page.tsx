@@ -37,71 +37,118 @@ export default function NotificationsSettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-8 py-8">
-      <h1 className="font-display font-bold text-xl text-foreground mb-6">Notifications</h1>
-
-      {/* Global settings */}
-      <div className="bg-surface border border-border rounded-xl p-5 mb-6">
-        <h2 className="font-semibold text-sm text-foreground mb-4">Global Settings</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Volume2 className="w-4 h-4 text-accent" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Notification Sounds</p>
-                <p className="text-xs text-muted-foreground">Play sounds for new notifications</p>
-              </div>
-            </div>
-            <Toggle checked={sound} onChange={setSound} />
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+      <div>
+        <h1 className="font-display font-black text-2xl md:text-4xl tracking-tight flex items-center gap-3 text-foreground">
+          <div className="p-2 md:p-2.5 rounded-2xl bg-accent/10">
+            <Bell className="w-6 h-6 md:w-8 md:h-8 text-accent" />
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Smartphone className="w-4 h-4 text-accent" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Quiet Hours</p>
-                <p className="text-xs text-muted-foreground">Pause notifications during these times</p>
-              </div>
-            </div>
-            <select value={quietHours} onChange={e => setQuietHours(e.target.value)}
-              className="bg-muted border border-border rounded-lg px-3 py-1.5 text-xs text-foreground outline-none">
-              {QUIET_HOURS.map(q => <option key={q}>{q}</option>)}
-            </select>
-          </div>
-        </div>
+          Notifications
+        </h1>
+        <p className="text-sm font-medium text-muted-foreground mt-2 md:mt-3 px-1">Manage how and when you receive alerts and updates</p>
       </div>
 
-      {/* Per-event settings */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden mb-6">
-        <div className="px-5 py-3 border-b border-border bg-muted/30">
-          <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-muted-foreground">
-            <span className="col-span-6">Notification</span>
-            <span className="col-span-2 text-center">Push</span>
-            <span className="col-span-2 text-center">Email</span>
-            <span className="col-span-2 text-center">In-App</span>
-          </div>
-        </div>
-        {settings.map((s, i) => (
-          <div key={s.id} className={cn("px-5 py-4 grid grid-cols-12 gap-4 items-center", i < settings.length - 1 && "border-b border-border")}>
-            <div className="col-span-6 flex items-center gap-3">
-              <div className="p-1.5 bg-muted rounded-lg">{s.icon}</div>
-              <div>
-                <p className="text-sm font-medium text-foreground">{s.label}</p>
-                <p className="text-xs text-muted-foreground">{s.description}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+        <div className="lg:col-span-4 space-y-6 md:space-y-8">
+          {/* Global settings */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface/50 backdrop-blur-sm border border-border/60 rounded-[24px] p-6 md:p-8 space-y-8 shadow-sm">
+            <h3 className="font-bold text-[15px] flex items-center gap-2 border-b border-border/30 pb-4">
+              <Smartphone className="w-4 h-4 text-accent" /> Global Settings
+            </h3>
+            
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                    <Volume2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-bold text-foreground">Notification Sounds</p>
+                    <p className="text-[11px] font-medium text-muted-foreground opacity-60">Alert sounds for messages</p>
+                  </div>
+                </div>
+                <Toggle checked={sound} onChange={setSound} />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <p className="text-[13px] font-bold text-foreground">Quiet Hours</p>
+                </div>
+                <select value={quietHours} onChange={e => setQuietHours(e.target.value)}
+                  className="w-full bg-background/50 border border-border/40 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-widest text-foreground outline-none focus:ring-2 focus:ring-accent/20 transition-all cursor-pointer">
+                  {QUIET_HOURS.map(q => <option key={q} className="bg-surface">{q}</option>)}
+                </select>
+                <p className="text-[10px] font-medium text-muted-foreground px-1 opacity-60 italic">Pause all notifications during these times</p>
               </div>
             </div>
-            <div className="col-span-2 flex justify-center"><Toggle checked={s.push} onChange={() => toggle(s.id, "push")} /></div>
-            <div className="col-span-2 flex justify-center"><Toggle checked={s.email} onChange={() => toggle(s.id, "email")} /></div>
-            <div className="col-span-2 flex justify-center"><Toggle checked={s.inApp} onChange={() => toggle(s.id, "inApp")} /></div>
-          </div>
-        ))}
-      </div>
+          </motion.div>
+        </div>
 
-      <div className="flex justify-end">
-        <motion.button onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-          className={cn("flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all",
-            saved ? "bg-green-500/20 text-green-400 border border-green-500/30" : "accent-gradient text-white shadow-accent-glow")}>
-          {saved ? <><Check className="w-4 h-4" /> Saved!</> : "Save Preferences"}
-        </motion.button>
+        <div className="lg:col-span-8 space-y-6">
+          {/* Per-event settings */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-surface/50 backdrop-blur-sm border border-border/60 rounded-[24px] overflow-hidden shadow-sm">
+            <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-5 border-b border-border/40 bg-surface/30">
+              <span className="col-span-6 text-[11px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Notification Type</span>
+              <span className="col-span-2 text-center text-[11px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Push</span>
+              <span className="col-span-2 text-center text-[11px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Email</span>
+              <span className="col-span-2 text-center text-[11px] font-black uppercase tracking-widest text-muted-foreground opacity-60">In-App</span>
+            </div>
+
+            <div className="divide-y divide-border/30">
+              {settings.map((s) => (
+                <div key={s.id} className="p-6 md:px-8 md:py-6 flex flex-col md:grid md:grid-cols-12 gap-6 md:gap-4 items-start md:items-center hover:bg-muted/10 transition-colors">
+                  <div className="col-span-6 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-muted/40 border border-border/30 flex items-center justify-center flex-shrink-0">
+                      {s.icon}
+                    </div>
+                    <div>
+                      <p className="text-[14px] font-bold text-foreground">{s.label}</p>
+                      <p className="text-xs font-medium text-muted-foreground opacity-60">{s.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Desktop Grid Layout */}
+                  <div className="hidden md:contents">
+                    <div className="col-span-2 flex justify-center"><Toggle checked={s.push} onChange={() => toggle(s.id, "push")} /></div>
+                    <div className="col-span-2 flex justify-center"><Toggle checked={s.email} onChange={() => toggle(s.id, "email")} /></div>
+                    <div className="col-span-2 flex justify-center"><Toggle checked={s.inApp} onChange={() => toggle(s.id, "inApp")} /></div>
+                  </div>
+
+                  {/* Mobile Stacked Controls */}
+                  <div className="flex md:hidden w-full items-center justify-between bg-muted/20 p-3 rounded-2xl gap-4">
+                    <div className="flex flex-col items-center gap-1.5 px-2">
+                      <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground opacity-60">Push</span>
+                      <Toggle checked={s.push} onChange={() => toggle(s.id, "push")} />
+                    </div>
+                    <div className="w-px h-8 bg-border/40" />
+                    <div className="flex flex-col items-center gap-1.5 px-2">
+                      <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground opacity-60">Email</span>
+                      <Toggle checked={s.email} onChange={() => toggle(s.id, "email")} />
+                    </div>
+                    <div className="w-px h-8 bg-border/40" />
+                    <div className="flex flex-col items-center gap-1.5 px-2">
+                      <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground opacity-60">In-App</span>
+                      <Toggle checked={s.inApp} onChange={() => toggle(s.id, "inApp")} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          <div className="flex justify-end pt-4">
+            <button 
+              onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }}
+              className={cn("px-8 py-4 rounded-[18px] text-[13px] font-bold uppercase tracking-widest transition-all btn-press shadow-xl",
+                saved ? "bg-green-500 text-white shadow-green-500/20" : "accent-gradient text-white shadow-accent/20")}
+            >
+              {saved ? <><Check className="w-4 h-4" /> Preferences Saved</> : "Apply Changes"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

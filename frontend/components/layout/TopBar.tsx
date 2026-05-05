@@ -53,41 +53,82 @@ export default function TopBar() {
   }
 
   return (
-    <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-10">
-      <div className="flex items-center gap-3">
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Menu className="w-4 h-4" /></button>
-        <div className="flex items-center gap-2"><h1 className="font-display font-semibold text-sm text-foreground">{pageTitle}</h1></div>
+    <header className="h-14 md:h-16 flex items-center justify-between px-4 md:px-6 border-b border-border bg-surface/80 backdrop-blur-xl flex-shrink-0 z-40 sticky top-0">
+      <div className="flex items-center gap-3 md:gap-4 min-w-0">
+        <button 
+          onClick={() => setSidebarOpen(!sidebarOpen)} 
+          aria-label="Toggle sidebar" 
+          className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 lg:hidden flex-shrink-0"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="font-display font-black text-sm md:text-base text-foreground tracking-tight truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">
+            {pageTitle}
+          </h1>
+        </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5 md:gap-3">
         {/* Quick search → opens Command Palette */}
-        <button onClick={() => setCommandPaletteOpen(true)} aria-label="Search (Cmd+K)" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors text-xs">
-          <Search className="w-3.5 h-3.5" /><span className="hidden sm:inline">Search</span><kbd className="hidden sm:inline text-xs bg-surface rounded px-1 py-0.5">⌘K</kbd>
+        <button 
+          onClick={() => setCommandPaletteOpen(true)} 
+          aria-label="Search (Cmd+K)" 
+          className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-muted/50 border border-transparent hover:border-border/60 text-muted-foreground hover:text-foreground transition-all duration-200 text-xs font-medium group"
+        >
+          <Search className="w-4 h-4 transition-transform group-hover:scale-110" />
+          <span className="hidden md:inline">Quick Search</span>
+          <kbd className="hidden lg:inline text-[10px] bg-surface rounded-md px-1.5 py-0.5 border border-border/40 opacity-60">⌘K</kbd>
         </button>
 
-        {/* Theme cycle */}
-        <div className="relative group">
-          <button onClick={cycleTheme} aria-label="Switch theme" title={`Current: ${themes.find((t) => t.id === theme)?.name}`} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">{THEME_ICONS[theme]}</button>
-          <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[130px]">
-            {themes.map((t) => (
-              <button key={t.id} onClick={(e) => { e.stopPropagation(); setTheme(t.id); }} className={cn("w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-muted transition-colors", theme === t.id && "text-accent font-medium")}>
-                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: t.preview.accent }} />{t.name}
-              </button>
-            ))}
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Theme cycle */}
+          <div className="relative group">
+            <button 
+              onClick={cycleTheme} 
+              aria-label="Switch theme" 
+              className="p-2 rounded-xl text-muted-foreground hover:text-accent hover:bg-accent/10 transition-all duration-200"
+            >
+              {THEME_ICONS[theme]}
+            </button>
+            <div className="absolute right-0 top-[calc(100%+8px)] hidden group-hover:block z-50 bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl py-2 min-w-[160px] animate-in fade-in slide-in-from-top-2">
+              <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Select Theme</div>
+              {themes.map((t) => (
+                <button 
+                  key={t.id} 
+                  onClick={(e) => { e.stopPropagation(); setTheme(t.id); }} 
+                  className={cn("w-full flex items-center gap-3 px-3 py-2 text-xs text-left hover:bg-muted/50 transition-colors", theme === t.id && "text-accent bg-accent/5 font-bold")}
+                >
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-surface shadow-sm" style={{ backgroundColor: t.preview.accent }} />
+                  {t.name}
+                  {theme === t.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Notifications */}
+          <NotificationDropdown />
+
+          {/* Settings Toggle */}
+          <Link href="/settings/profile">
+            <button aria-label="Settings" className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hidden sm:flex">
+              <Settings2 className="w-4.5 h-4.5" />
+            </button>
+          </Link>
         </div>
 
-        {/* Notifications Dropdown */}
-        <NotificationDropdown />
-
-        {/* Settings */}
-        <Link href="/settings/profile"><button aria-label="Settings" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Settings2 className="w-4 h-4" /></button></Link>
-
         {/* User avatar */}
+        <div className="h-8 w-px bg-border/40 mx-1 hidden sm:block" />
         <Link href="/settings/profile">
-          <button aria-label="Profile" className="ml-1">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-accent/40 hover:ring-accent transition-all" style={{ backgroundColor: stringToColor(displayUser.name) }}>
-              {displayUser.avatar_url ? <img src={displayUser.avatar_url} alt="" className="w-full h-full rounded-full object-cover" /> : getInitials(displayUser.name)}
+          <button aria-label="Profile" className="flex items-center gap-2 p-1 pl-1 pr-1 sm:pr-2.5 rounded-2xl hover:bg-muted transition-all duration-200 group">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-lg shadow-accent/10 transition-transform group-hover:scale-105" style={{ backgroundColor: stringToColor(displayUser.name) }}>
+              {displayUser.avatar_url ? <img src={displayUser.avatar_url} alt="" className="w-full h-full rounded-xl object-cover" /> : getInitials(displayUser.name)}
+            </div>
+            <div className="hidden lg:flex flex-col items-start leading-none pr-1">
+              <span className="text-[11px] font-bold text-foreground truncate max-w-[80px]">{displayUser.name.split(" ")[0]}</span>
+              <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">Profile</span>
             </div>
           </button>
         </Link>

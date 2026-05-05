@@ -13,6 +13,7 @@ import { getSocket } from "@/lib/socket";
 import { toast } from "react-hot-toast";
 import ChatToolbar from "@/components/chat/ChatToolbar";
 
+
 const STATUS_COLOR: Record<string, string> = { online: "bg-green-500", away: "bg-yellow-500", dnd: "bg-red-500", offline: "bg-muted" };
 const STATUS_LABEL: Record<string, string> = { online: "Active now", away: "Away", dnd: "Do Not Disturb", offline: "Offline" };
 const EMOJI_QUICK = ["👍", "❤️", "😂", "😮", "🔥"];
@@ -591,32 +592,32 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
   return (
     <div className="flex flex-col h-full bg-background relative">
       {/* Header */}
-      <div className="flex items-center gap-3.5 px-5 py-3 border-b border-border/40 glass-strong flex-shrink-0 z-20 sticky top-0">
+      <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-border/40 glass-strong flex-shrink-0 z-20 sticky top-0 h-16 md:h-20">
         <div className="relative group/avatar cursor-pointer">
-          <div className={cn("w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold text-white overflow-hidden shadow-md ring-2 ring-offset-2 ring-offset-surface transition-all duration-300", currentStatus === "online" ? "ring-green-500/60" : currentStatus === "away" ? "ring-yellow-500/60" : currentStatus === "dnd" ? "ring-red-500/60" : "ring-border/30")} style={{ backgroundColor: dmUser.avatar_url ? "transparent" : stringToColor(dmUser.name) }}>
+          <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center text-sm font-bold text-white overflow-hidden shadow-md ring-2 ring-offset-2 ring-offset-background transition-all duration-300", currentStatus === "online" ? "ring-green-500/60" : currentStatus === "away" ? "ring-yellow-500/60" : currentStatus === "dnd" ? "ring-red-500/60" : "ring-border/30")} style={{ backgroundColor: dmUser.avatar_url ? "transparent" : stringToColor(dmUser.name) }}>
             {dmUser.avatar_url ? <img src={dmUser.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(dmUser.name)}
           </div>
           <div className={cn("absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-[2.5px] border-surface transition-colors", STATUS_COLOR[currentStatus] || STATUS_COLOR.offline, currentStatus === "online" && "animate-pulse")} />
         </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-display font-bold text-foreground text-[15px] truncate tracking-tight">{dmUser.name}</h2>
-          <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground font-medium truncate">
+        <div className="flex-1 min-w-0 ml-1">
+          <h2 className="font-display font-black text-foreground text-[14px] md:text-[16px] truncate tracking-tight">{dmUser.name}</h2>
+          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] md:text-[11px] text-muted-foreground font-semibold truncate uppercase tracking-wider">
             {isTyping && (
               <div className="flex gap-[3px] items-center mr-1">
                 <div className="typing-dot" /><div className="typing-dot" /><div className="typing-dot" />
               </div>
             )}
-            <span className={cn("transition-all duration-300", isTyping ? "text-accent font-semibold" : isReading ? "text-green-500 font-semibold" : "")}>
+            <span className={cn("transition-all duration-300", isTyping ? "text-accent font-black" : isReading ? "text-green-500 font-black" : "")}>
               {statusDisplay}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={() => handleCall("audio")} title="Voice Call" className="p-2.5 rounded-xl text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-200 hover:scale-105"><Phone className="w-[18px] h-[18px]" /></button>
-          <button onClick={() => handleCall("video")} title="Video Call" className="p-2.5 rounded-xl text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-all duration-200 hover:scale-105"><Video className="w-[18px] h-[18px]" /></button>
-          <div className="w-px h-5 bg-border/50 mx-1" />
-          <button onClick={() => setRightPanel(rightPanel === "search" ? null : "search")} title="Search Chat" className={cn("p-2.5 rounded-xl transition-all duration-200", rightPanel === "search" ? "bg-accent/15 text-accent shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted")}><Search className="w-[18px] h-[18px]" /></button>
-          <button title="More Options" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"><MoreHorizontal className="w-[18px] h-[18px]" /></button>
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          <button onClick={() => handleCall("audio")} title="Voice Call" className="p-2 sm:p-2.5 rounded-xl text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-200"><Phone className="w-[18px] h-[18px]" /></button>
+          <button onClick={() => handleCall("video")} title="Video Call" className="p-2 sm:p-2.5 rounded-xl text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-all duration-200"><Video className="w-[18px] h-[18px]" /></button>
+          <div className="w-px h-5 bg-border/50 mx-0.5 sm:mx-1" />
+          <button onClick={() => setRightPanel(rightPanel === "search" ? null : "search")} title="Search Chat" className={cn("p-2 sm:p-2.5 rounded-xl transition-all duration-200", rightPanel === "search" ? "bg-accent/15 text-accent shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted")}><Search className="w-[18px] h-[18px]" /></button>
+          <button title="More Options" className="p-2 sm:p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"><MoreHorizontal className="w-[18px] h-[18px]" /></button>
         </div>
       </div>
 
@@ -806,9 +807,22 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
                     </div>
                   </button>
 
+                  <button
+                    onClick={() => insertMention("everyone")}
+                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">everyone</div>
+                      <div className="text-[10px] text-muted-foreground">Notify all members</div>
+                    </div>
+                  </button>
+
                   <div className="h-px bg-border/40 my-1.5 mx-2" />
 
-                  {mentionMembers.slice(0, 10).map((m: any) => {
+                  {mentionMembers.filter(m => m.id !== "synapse" && m.id !== "everyone").slice(0, 15).map((m: any) => {
                     const memberName = m.full_name || m.username || "Unknown";
                     const isOnline = onlineUserIds.includes(m.id);
                     return (

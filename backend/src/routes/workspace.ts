@@ -106,10 +106,12 @@ router.get("/:id/members", async (req: Request, res: Response) => {
   const members = await Promise.all(data.map(async (m: any) => {
     const profile = m.profiles;
     if (profile && !profile.username) {
-      const base = (profile.full_name || "user").split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-      const username = `${base}${Math.floor(1000 + Math.random() * 9000)}`;
+      // Create a clean username from first name
+      const firstName = (profile.full_name || "user").split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      // Add a small random suffix to ensure uniqueness in the DB if multiple users have the same first name
+      const username = `${firstName}_${Math.floor(Math.random() * 9999)}`;
       
-      // Update in DB
+      // Update in DB so it persists
       await supabaseAdmin
         .from("profiles")
         .update({ username })
