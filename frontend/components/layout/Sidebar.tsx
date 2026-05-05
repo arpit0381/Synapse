@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Hash, Lock, MessageCircle, LayoutDashboard, CheckSquare, FolderOpen,
-  Bot, Search, BarChart3, Plus, ChevronDown, ChevronRight, Users, Zap, 
+  Bot, Search, BarChart3, Plus, ChevronDown, ChevronRight, Users, Zap,
   Volume2, Inbox, MoreHorizontal, ArrowUpCircle, LayoutGrid
 } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
@@ -142,7 +142,7 @@ export default function Sidebar() {
     const handleNewMessage = (msg: any) => {
       const channelId = msg.channel_id || msg.channelId;
       const userId = msg.user_id || msg.userId;
-      
+
       if (pathname === `/channels/${channelId}`) return;
       if (userId !== user.id) {
         // Update Query Cache
@@ -150,7 +150,7 @@ export default function Sidebar() {
           if (!old?.channels) return old;
           return {
             ...old,
-            channels: old.channels.map((c: any) => 
+            channels: old.channels.map((c: any) =>
               c.id === channelId ? { ...c, unread_count: (c.unread_count || 0) + 1 } : c
             )
           };
@@ -164,12 +164,12 @@ export default function Sidebar() {
       if (!currentWorkspace || !user) return;
       const fromId = msg.from_user_id || msg.fromUserId || msg.sender_id;
       const toId = msg.to_user_id || msg.toUserId || msg.receiver_id;
-      
+
       if (!fromId) return;
-      
+
       const otherUserId = fromId === user.id ? toId : fromId;
       if (pathname === `/dm/${otherUserId}`) return;
-      
+
       if (fromId !== user.id) {
         queryClient.setQueryData(["dms", currentWorkspace.id], (old: any) => {
           if (!old?.conversations) return old;
@@ -204,7 +204,7 @@ export default function Sidebar() {
   const publicChannels = channels.filter((c) => !c.is_private);
   const privateChannels = channels.filter((c) => c.is_private);
 
-  // Real DMs
+  // Real DMs in real time 
   const { data: dmsData } = useQuery({
     queryKey: ["dms", currentWorkspace?.id],
     queryFn: () => api.dm.listConversations(currentWorkspace!.id, user!.id),
@@ -213,7 +213,7 @@ export default function Sidebar() {
   const dms = dmsData?.conversations || [];
 
   const getStatus = (userId: string) => {
-    return (presenceMap[userId]?.status as keyof typeof STATUS_COLORS) 
+    return (presenceMap[userId]?.status as keyof typeof STATUS_COLORS)
       || (onlineUserIds.includes(userId) ? "online" : "offline");
   };
 
@@ -237,12 +237,12 @@ export default function Sidebar() {
         "lg:relative lg:z-auto",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        
+
         {/* ── Icon Rail (Primary Nav) ── */}
         <div className="w-[76px] bg-[#4B39EF] dark:bg-[#3B28CC] border-r border-black/10 flex-shrink-0 flex flex-col items-center py-4 z-50 shadow-xl relative">
           {/* Workspace Button */}
           <RailTooltip label="Switch Workspace">
-            <button 
+            <button
               onClick={() => setWorkspaceSwitcherOpen(true)}
               className="w-12 h-12 rounded-[14px] bg-white text-[#4B39EF] flex items-center justify-center shadow-lg hover:scale-105 hover:rounded-[10px] transition-all duration-300 btn-press group relative mb-6"
             >
@@ -264,7 +264,7 @@ export default function Sidebar() {
                       {isActive && (
                         <motion.div layoutId="rail-indicator" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full" />
                       )}
-                      
+
                       <div className={cn(
                         "w-[46px] h-[46px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 group-hover/rail:bg-white/10",
                         isActive ? "bg-white/20 text-white" : "text-white/70"
@@ -310,7 +310,7 @@ export default function Sidebar() {
         </div>
 
         {/* ── Context Panel (Secondary Sidebar) ── */}
-        <div 
+        <div
           className={cn(
             "bg-surface/95 backdrop-blur-xl border-r border-border/60 overflow-hidden flex flex-col h-full z-40 shadow-2xl lg:shadow-none transition-all duration-[400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
             (sidebarOpen && isChatRoute) ? "w-[260px] opacity-100" : "w-0 border-r-0 opacity-0"
@@ -329,7 +329,7 @@ export default function Sidebar() {
             </div>
 
             <div className="flex-1 overflow-y-auto chat-scroll py-3">
-              
+
               {/* Top Context Menu */}
               <div className="px-3 mb-6 space-y-[2px]">
                 {CONTEXT_MENU.map((item) => {
@@ -361,7 +361,7 @@ export default function Sidebar() {
                       <div className={cn("flex items-center gap-2.5 px-3 py-2 rounded-xl mx-2 text-[14px] transition-all duration-200 group/ch", isActive ? "bg-accent/10 text-accent font-semibold" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground")}>
                         <Hash className={cn("w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200", isActive ? "text-accent" : "text-muted-foreground/60 group-hover/ch:rotate-12")} />
                         <span className={cn("flex-1 truncate", unread > 0 && !isActive && "text-foreground font-bold")}>{(ch as any).name}</span>
-                        
+
                         {activeCall && (
                           <div className="flex items-center gap-1.5 ml-auto flex-shrink-0 bg-green-500/15 px-2 py-0.5 rounded-full">
                             <div className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span></div>
@@ -416,7 +416,7 @@ export default function Sidebar() {
                   );
                 })}
               </SidebarSection>
-              
+
             </div>
           </div>
         </div>
