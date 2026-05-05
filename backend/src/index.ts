@@ -513,58 +513,121 @@ io.on("connection", (socket) => {
 
   // ── Helper: Parse @mentions and create notifications ───────────
   async function parseMentionsAndNotify(content: string, senderId: string, senderName: string, channelId: string) {
-    const mentionRegex = /@(\w[\w\s]*\w|\w)/g;
+    const mentionRegex = /@(\w[\w.]*\w|\w)/g;
     const mentions = content.match(mentionRegex);
     if (!mentions || mentions.length === 0) return;
 
     try {
-      // Get channel to find workspace
+      // Get channel to find workspace + channel name
       const { data: channel } = await supabaseAdmin
         .from("channels")
-        .select("workspace_id")
+        .select("workspace_id, name")
         .eq("id", channelId)
         .single();
 
       if (!channel) return;
 
+      const channelName = channel.name || "a channel";
+
       // Get workspace members
       const { data: members } = await supabaseAdmin
         .from("workspace_members")
-        .select("user_id, profiles ( full_name, username )")
+        .select("user_id, profiles ( id, full_name, username )")
         .eq("workspace_id", channel.workspace_id);
 
       if (!members) return;
 
+      // Track already-notified users to avoid duplicates
+      const notifiedUserIds = new Set<string>();
+
       for (const mention of mentions) {
         const name = mention.slice(1).toLowerCase(); // remove @
+
+        // Handle @everyone and @channel — notify all members in the channel
+        if (name === "everyone" || name === "channel") {
+          for (const member of members) {
+            if (member.user_id === senderId || notifiedUserIds.has(member.user_id)) continue;
+            notifiedUserIds.add(member.user_id);
+
+            await supabaseAdmin.from("notifications").insert({
+              user_id: member.user_id,
+              workspace_id: channel.workspace_id,
+              type: "mention",
+              title: `${senderName} mentioned @${name} in #${channelName}`,
+              body: content.slice(0, 120),
+              link: `/channels/${channelId}`,
+              metadata: { sender_id: senderId, channel_id: channelId, mention_type: name },
+            });
+
+            io.to(`user:${member.user_id}`).emit("notification:mention", {
+              type: "mention",
+              title: `${senderName} mentioned @${name}`,
+              body: content.slice(0, 120),
+              channelName,
+              channelId,
+              senderName,
+              senderId,
+              mentionType: name,
+            });
+
+            // Also emit generic notification:new
+            io.to(`user:${member.user_id}`).emit("notification:new", {
+              type: "mention",
+              title: `${senderName} mentioned @${name} in #${channelName}`,
+              body: content.slice(0, 120),
+              link: `/channels/${channelId}`,
+            });
+          }
+          continue;
+        }
+
+        // Individual user mention
         const targetMember = members.find((m: any) => {
           const p = m.profiles;
           if (!p) return false;
-          return (p.full_name || "").toLowerCase().includes(name) ||
-                 (p.username || "").toLowerCase().includes(name);
+          const fullName = (p.full_name || "").toLowerCase();
+          const username = (p.username || "").toLowerCase();
+          return fullName === name || username === name ||
+                 fullName.includes(name) || username.includes(name);
         });
 
-        if (targetMember && targetMember.user_id !== senderId) {
-          // Insert notification
+        if (targetMember && targetMember.user_id !== senderId && !notifiedUserIds.has(targetMember.user_id)) {
+          notifiedUserIds.add(targetMember.user_id);
+
+          // Insert notification to DB
           await supabaseAdmin.from("notifications").insert({
             user_id: targetMember.user_id,
             workspace_id: channel.workspace_id,
             type: "mention",
-            title: `${senderName} mentioned you`,
-            body: content.slice(0, 100),
+            title: `${senderName} mentioned you in #${channelName}`,
+            body: content.slice(0, 120),
             link: `/channels/${channelId}`,
-            metadata: { sender_id: senderId, channel_id: channelId },
+            metadata: { sender_id: senderId, channel_id: channelId, mention_type: "user" },
           });
 
-          // Emit to user's socket room
+          // Emit rich mention notification for toast
+          io.to(`user:${targetMember.user_id}`).emit("notification:mention", {
+            type: "mention",
+            title: `${senderName} tagged you`,
+            body: content.slice(0, 120),
+            channelName,
+            channelId,
+            senderName,
+            senderId,
+            mentionType: "user",
+          });
+
+          // Also emit generic notification:new for badge count
           io.to(`user:${targetMember.user_id}`).emit("notification:new", {
             type: "mention",
-            title: `${senderName} mentioned you`,
-            body: content.slice(0, 100),
+            title: `${senderName} mentioned you in #${channelName}`,
+            body: content.slice(0, 120),
             link: `/channels/${channelId}`,
           });
         }
       }
+
+      console.log(`[Mentions] Processed ${mentions.length} mention(s) from ${senderName} in #${channelName}, notified ${notifiedUserIds.size} user(s)`);
     } catch (err) {
       console.error("[Mentions] Error parsing mentions:", err);
     }

@@ -5,6 +5,8 @@ import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import { AppInitializer } from "@/components/providers/AppInitializer";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { MentionToastListener } from "@/components/layout/MentionToastListener";
+import { Toaster } from "react-hot-toast";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -25,6 +27,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen bg-background overflow-hidden">
       <AppInitializer />
       <CommandPalette />
+      <MentionToastListener />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: "hsl(var(--surface))",
+            color: "hsl(var(--foreground))",
+            border: "1px solid hsl(var(--border))",
+            borderRadius: "12px",
+          },
+        }}
+      />
       {/* Sidebar */}
       <Sidebar />
 

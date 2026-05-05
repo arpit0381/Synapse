@@ -154,7 +154,7 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
                 </div>
               </div>
             )}
-            {msg.content}
+            <MentionRenderer content={msg.content} isOwn={isOwn && !isAI} currentUserId={currentUserId} />
           </div>
           
           {/* Reactions */}
@@ -180,6 +180,44 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Mention Renderer: Highlights @mentions inside messages ────────────
+function MentionRenderer({ content, isOwn, currentUserId }: { content: string; isOwn: boolean; currentUserId?: string }) {
+  const { user } = useAppStore();
+  const mentionRegex = /(@\w[\w.]*\w|@\w)/g;
+  const parts = content.split(mentionRegex);
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (mentionRegex.test(part)) {
+          mentionRegex.lastIndex = 0; // reset regex state
+          const name = part.slice(1).toLowerCase();
+          const isSelfMention =
+            user && (
+              (user.name || "").toLowerCase().includes(name) ||
+              (user.username || "").toLowerCase().includes(name) ||
+              name === "everyone" || name === "channel"
+            );
+
+          if (isOwn) {
+            return <span key={i} className="font-bold underline underline-offset-2">{part}</span>;
+          }
+
+          return (
+            <span
+              key={i}
+              className={isSelfMention ? "mention-highlight-self" : "mention-highlight"}
+            >
+              {part}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
   );
 }
 
@@ -223,6 +261,8 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
   const [showInputEmoji, setShowInputEmoji] = useState(false);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionCursorStart, setMentionCursorStart] = useState(0);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -568,6 +608,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
 
   function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const val = e.target.value;
+    const cursorPos = e.target.selectionStart;
     setInput(val);
     
     if (val === "/") {
@@ -576,10 +617,30 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
       setShowSlashMenu(false);
     }
 
-    if (val.endsWith("@")) {
-      setShowMentionMenu(true);
-    } else if (!val.includes("@")) {
+    // Smart @mention detection: look backward from cursor for the @ symbol
+    const textBeforeCursor = val.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+    if (lastAtIndex !== -1) {
+      const charBefore = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : " ";
+      // Only trigger if @ is at start or preceded by whitespace
+      if (lastAtIndex === 0 || /\s/.test(charBefore)) {
+        const query = textBeforeCursor.substring(lastAtIndex + 1);
+        // Only show if there's no space in the query (single word mention)
+        if (!/\s/.test(query) || query.length === 0) {
+          setShowMentionMenu(true);
+          setMentionQuery(query);
+          setMentionCursorStart(lastAtIndex);
+        } else {
+          setShowMentionMenu(false);
+          setMentionQuery("");
+        }
+      } else {
+        setShowMentionMenu(false);
+        setMentionQuery("");
+      }
+    } else {
       setShowMentionMenu(false);
+      setMentionQuery("");
     }
     
     // Typing indicator throttle
@@ -595,6 +656,29 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
       socket?.emit("typing_stop", { channelId: id, userId: user?.id });
     }
   }
+
+  // Insert a mention at the tracked @ position
+  function insertMention(name: string) {
+    const before = input.substring(0, mentionCursorStart);
+    const after = input.substring(mentionCursorStart + 1 + mentionQuery.length);
+    const newVal = `${before}@${name} ${after}`;
+    setInput(newVal);
+    setShowMentionMenu(false);
+    setMentionQuery("");
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const newCursor = mentionCursorStart + name.length + 2; // @name + space
+      inputRef.current?.setSelectionRange(newCursor, newCursor);
+    }, 0);
+  }
+
+  // Filtered members for mention dropdown
+  const mentionMembers = (membersData?.members || []).filter((m: any) => {
+    if (!mentionQuery) return true;
+    const q = mentionQuery.toLowerCase();
+    const name = (m.full_name || m.username || "").toLowerCase();
+    return name.includes(q);
+  });
   
   const slashCommands: { id: "doc" | "sheet" | "task"; title: string; description: string; icon: any; color: string; bg: string }[] = [
     { id: "doc", title: "Document", description: "Create a new document", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -858,26 +942,98 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute bottom-[calc(100%+10px)] left-0 w-[240px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
+                    className="absolute bottom-[calc(100%+10px)] left-0 w-[280px] bg-surface/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl overflow-hidden z-50"
                   >
-                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Mentions</div>
-                    <div className="space-y-1">
-                      <button
-                        onClick={() => {
-                          setInput(prev => prev + "synapse ");
-                          setShowMentionMenu(false);
-                          inputRef.current?.focus();
-                        }}
-                        className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
-                          <Bot className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">Synapse AI</div>
-                          <div className="text-[10px] text-muted-foreground">Ask anything</div>
-                        </div>
-                      </button>
+                    <div className="px-3 pt-3 pb-1.5 flex items-center gap-2">
+                      <AtSign className="w-3.5 h-3.5 text-accent" />
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tag Someone</span>
+                      {mentionQuery && (
+                        <span className="text-[10px] text-accent bg-accent/10 px-1.5 py-0.5 rounded font-semibold ml-auto">@{mentionQuery}</span>
+                      )}
+                    </div>
+                    <div className="max-h-[260px] overflow-y-auto p-1.5 space-y-0.5">
+                      {/* @everyone and @channel special options */}
+                      {(!mentionQuery || "everyone".includes(mentionQuery.toLowerCase())) && (
+                        <button
+                          onClick={() => insertMention("everyone")}
+                          className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                            <Users className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-foreground group-hover:text-amber-500 transition-colors">@everyone</div>
+                            <div className="text-[10px] text-muted-foreground">Notify all members</div>
+                          </div>
+                        </button>
+                      )}
+                      {(!mentionQuery || "channel".includes(mentionQuery.toLowerCase())) && (
+                        <button
+                          onClick={() => insertMention("channel")}
+                          className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                            <Hash className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-foreground group-hover:text-blue-500 transition-colors">@channel</div>
+                            <div className="text-[10px] text-muted-foreground">Notify channel members</div>
+                          </div>
+                        </button>
+                      )}
+                      {/* Synapse AI option */}
+                      {(!mentionQuery || "synapse".includes(mentionQuery.toLowerCase())) && (
+                        <button
+                          onClick={() => insertMention("synapse")}
+                          className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                            <Bot className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">Synapse AI</div>
+                            <div className="text-[10px] text-muted-foreground">Ask anything</div>
+                          </div>
+                        </button>
+                      )}
+
+                      {/* Divider */}
+                      {mentionMembers.length > 0 && <div className="h-px bg-border/50 my-1.5 mx-2" />}
+
+                      {/* Real workspace members */}
+                      {mentionMembers.slice(0, 10).map((m: any) => {
+                        const memberName = m.full_name || m.username || "Unknown";
+                        const isOnline = onlineUserIds.includes(m.id);
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => insertMention(memberName)}
+                            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                          >
+                            <div className="relative">
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white overflow-hidden"
+                                style={{ backgroundColor: m.avatar_url ? "transparent" : stringToColor(memberName) }}
+                              >
+                                {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(memberName)}
+                              </div>
+                              <div className={cn(
+                                "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface",
+                                isOnline ? "bg-green-500" : "bg-muted-foreground/40"
+                              )} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors truncate">{memberName}</div>
+                              {m.username && <div className="text-[10px] text-muted-foreground truncate">@{m.username}</div>}
+                            </div>
+                            {isOnline && <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />}
+                          </button>
+                        );
+                      })}
+
+                      {mentionMembers.length === 0 && mentionQuery && (
+                        <div className="text-center py-4 text-muted-foreground text-xs">No members matching "{mentionQuery}"</div>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -935,6 +1091,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               onEmojiClick={() => setShowInputEmoji(!showInputEmoji)}
               showEmoji={showInputEmoji}
               members={(membersData?.members || []).map((m: any) => ({ id: m.id, name: m.full_name || m.username || "Unknown", avatar_url: m.avatar_url }))}
+              onMention={(userId, name) => insertMention(name)}
             />
           </div>
           <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
