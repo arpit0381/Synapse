@@ -186,7 +186,9 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
 // ── Mention Renderer: Highlights @mentions inside messages ────────────
 function MentionRenderer({ content, isOwn, currentUserId }: { content: string; isOwn: boolean; currentUserId?: string }) {
   const { user } = useAppStore();
-  const mentionRegex = /(@\w[\w.]*\w|@\w)/g;
+  // Improved regex to capture mentions more reliably, including potential spaces if we wanted to support them,
+  // but sticking to standard word characters + dots/underscores for now for technical stability.
+  const mentionRegex = /(@[\w.]+)/g;
   const parts = content.split(mentionRegex);
 
   return (
@@ -199,7 +201,7 @@ function MentionRenderer({ content, isOwn, currentUserId }: { content: string; i
             user && (
               (user.name || "").toLowerCase().includes(name) ||
               (user.username || "").toLowerCase().includes(name) ||
-              name === "everyone" || name === "channel"
+              name === "everyone" || name === "channel" || name === "synapse"
             );
 
           if (isOwn) {
@@ -209,7 +211,12 @@ function MentionRenderer({ content, isOwn, currentUserId }: { content: string; i
           return (
             <span
               key={i}
-              className={isSelfMention ? "mention-highlight-self" : "mention-highlight"}
+              className={cn(
+                "px-1 rounded-md font-semibold transition-colors",
+                isSelfMention 
+                  ? "bg-accent/20 text-accent border border-accent/20 shadow-sm animate-pulse-subtle" 
+                  : "bg-muted/50 text-foreground border border-border/50"
+              )}
             >
               {part}
             </span>
@@ -310,8 +317,9 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
   }, [id, currentWorkspace?.id, updateUnreadCount, queryClient]);
 
   const { data: membersData } = useQuery({
-    queryKey: ["channel_members", id],
-    queryFn: () => api.channels.getMembers(id),
+    queryKey: ["workspace_members", currentWorkspace?.id],
+    queryFn: () => api.workspaces.getMembers(currentWorkspace!.id),
+    enabled: !!currentWorkspace?.id,
   });
 
   // 2. Fetch Messages
@@ -601,8 +609,27 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+      if (showMentionMenu && mentionMembers.length > 0) {
+        e.preventDefault();
+        const firstMember = mentionMembers[0];
+        insertMention(firstMember.full_name || firstMember.username || "Unknown");
+      } else {
+        e.preventDefault();
+        handleSend();
+      }
+    } else if (e.key === "Escape") {
+      setShowMentionMenu(false);
+      setShowSlashMenu(false);
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) setAttachment(file);
+      }
     }
   }
 
@@ -659,26 +686,46 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
 
   // Insert a mention at the tracked @ position
   function insertMention(name: string) {
+    // Slugify name for mention if it has spaces (standard practice)
+    const mentionName = name.replace(/\s+/g, "").toLowerCase();
     const before = input.substring(0, mentionCursorStart);
     const after = input.substring(mentionCursorStart + 1 + mentionQuery.length);
-    const newVal = `${before}@${name} ${after}`;
+    const newVal = `${before}@${mentionName} ${after}`;
     setInput(newVal);
     setShowMentionMenu(false);
     setMentionQuery("");
     setTimeout(() => {
       inputRef.current?.focus();
-      const newCursor = mentionCursorStart + name.length + 2; // @name + space
+      const newCursor = mentionCursorStart + mentionName.length + 2; // @name + space
       inputRef.current?.setSelectionRange(newCursor, newCursor);
     }, 0);
   }
 
   // Filtered members for mention dropdown
-  const mentionMembers = (membersData?.members || []).filter((m: any) => {
-    if (!mentionQuery) return true;
+  const mentionMembers = (() => {
+    const all = (membersData?.members || []).map((m: any) => ({
+      id: m.id,
+      full_name: m.full_name || m.username || "Unknown User",
+      username: m.username || "",
+      avatar_url: m.avatar_url,
+      isSpecial: false
+    }));
+    
+    // Add special tags
+    const special = [
+      { id: "everyone", full_name: "everyone", username: "everyone", isSpecial: true },
+      { id: "channel", full_name: "channel", username: "channel", isSpecial: true },
+    ];
+
+    const combined = [...special, ...all];
+
+    if (!mentionQuery) return combined;
     const q = mentionQuery.toLowerCase();
-    const name = (m.full_name || m.username || "").toLowerCase();
-    return name.includes(q);
-  });
+    return combined.filter(m => 
+      (m.full_name || "").toLowerCase().includes(q) || 
+      (m.username || "").toLowerCase().includes(q)
+    );
+  })();
   
   const slashCommands: { id: "doc" | "sheet" | "task"; title: string; description: string; icon: any; color: string; bg: string }[] = [
     { id: "doc", title: "Document", description: "Create a new document", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -901,9 +948,10 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               value={input}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder={`Message #${channel.name} (type '/' for apps)`}
               rows={1}
-              className="flex-1 bg-transparent text-[14.5px] text-foreground placeholder:text-muted-foreground py-3.5 px-2 resize-none outline-none max-h-[200px] leading-relaxed"
+              className="flex-1 bg-transparent text-[14.5px] text-foreground placeholder:text-muted-foreground py-3.5 px-2 resize-none outline-none focus:outline-none max-h-[200px] leading-relaxed"
               style={{ minHeight: "48px" }}
             />
 
@@ -934,142 +982,6 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              <AnimatePresence>
-                {showMentionMenu && (
-                  <motion.div 
-                    ref={mentionMenuRef}
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute bottom-[calc(100%+10px)] left-0 w-[280px] bg-surface/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl overflow-hidden z-50"
-                  >
-                    <div className="px-3 pt-3 pb-1.5 flex items-center gap-2">
-                      <AtSign className="w-3.5 h-3.5 text-accent" />
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tag Someone</span>
-                      {mentionQuery && (
-                        <span className="text-[10px] text-accent bg-accent/10 px-1.5 py-0.5 rounded font-semibold ml-auto">@{mentionQuery}</span>
-                      )}
-                    </div>
-                    <div className="max-h-[260px] overflow-y-auto p-1.5 space-y-0.5">
-                      {/* @everyone and @channel special options */}
-                      {(!mentionQuery || "everyone".includes(mentionQuery.toLowerCase())) && (
-                        <button
-                          onClick={() => insertMention("everyone")}
-                          className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                            <Users className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-foreground group-hover:text-amber-500 transition-colors">@everyone</div>
-                            <div className="text-[10px] text-muted-foreground">Notify all members</div>
-                          </div>
-                        </button>
-                      )}
-                      {(!mentionQuery || "channel".includes(mentionQuery.toLowerCase())) && (
-                        <button
-                          onClick={() => insertMention("channel")}
-                          className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                            <Hash className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-foreground group-hover:text-blue-500 transition-colors">@channel</div>
-                            <div className="text-[10px] text-muted-foreground">Notify channel members</div>
-                          </div>
-                        </button>
-                      )}
-                      {/* Synapse AI option */}
-                      {(!mentionQuery || "synapse".includes(mentionQuery.toLowerCase())) && (
-                        <button
-                          onClick={() => insertMention("synapse")}
-                          className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
-                            <Bot className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">Synapse AI</div>
-                            <div className="text-[10px] text-muted-foreground">Ask anything</div>
-                          </div>
-                        </button>
-                      )}
-
-                      {/* Divider */}
-                      {mentionMembers.length > 0 && <div className="h-px bg-border/50 my-1.5 mx-2" />}
-
-                      {/* Real workspace members */}
-                      {mentionMembers.slice(0, 10).map((m: any) => {
-                        const memberName = m.full_name || m.username || "Unknown";
-                        const isOnline = onlineUserIds.includes(m.id);
-                        return (
-                          <button
-                            key={m.id}
-                            onClick={() => insertMention(memberName)}
-                            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
-                          >
-                            <div className="relative">
-                              <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white overflow-hidden"
-                                style={{ backgroundColor: m.avatar_url ? "transparent" : stringToColor(memberName) }}
-                              >
-                                {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(memberName)}
-                              </div>
-                              <div className={cn(
-                                "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface",
-                                isOnline ? "bg-green-500" : "bg-muted-foreground/40"
-                              )} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors truncate">{memberName}</div>
-                              {m.username && <div className="text-[10px] text-muted-foreground truncate">@{m.username}</div>}
-                            </div>
-                            {isOnline && <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />}
-                          </button>
-                        );
-                      })}
-
-                      {mentionMembers.length === 0 && mentionQuery && (
-                        <div className="text-center py-4 text-muted-foreground text-xs">No members matching "{mentionQuery}"</div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              <AnimatePresence>
-                {showSlashMenu && (
-                  <motion.div 
-                    ref={slashMenuRef}
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute bottom-[calc(100%+10px)] left-[-40px] w-[260px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
-                  >
-                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Synapse Apps Hub</div>
-                    <div className="space-y-1">
-                      {slashCommands.filter(c => !input.trim().substring(1) || c.id.includes(input.trim().substring(1).toLowerCase())).map(cmd => (
-                        <button
-                          key={cmd.id}
-                          onClick={() => handleSlashCommand(cmd.id)}
-                          className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
-                        >
-                          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", cmd.bg, cmd.color, "group-hover:bg-accent group-hover:text-white")}>
-                            <cmd.icon className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">{cmd.title}</div>
-                            <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
               <button 
                 onClick={handleSend} 
                 disabled={(!input.trim() && !attachment) || sendMutation.isPending} 
@@ -1080,7 +992,148 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                 <Send className="w-4 h-4" style={{ marginLeft: "2px" }} />
               </button>
             </div>
-          </div>
+
+          <AnimatePresence>
+            {showMentionMenu && (
+              <motion.div 
+                ref={mentionMenuRef}
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute bottom-[calc(100%+12px)] left-4 w-[280px] max-w-[calc(100vw-40px)] bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col"
+              >
+                <div className="px-3.5 pt-3.5 pb-2 flex items-center gap-2 border-b border-border/30">
+                  <AtSign className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-[10px] font-bold text-foreground/70 uppercase tracking-widest">Mention</span>
+                  {mentionQuery && (
+                    <span className="text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full font-bold ml-auto">@{mentionQuery}</span>
+                  )}
+                </div>
+                <div className="max-h-[280px] overflow-y-auto p-1.5 space-y-0.5 chat-scroll">
+                  <button
+                    onClick={() => insertMention("synapse")}
+                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">Synapse AI</div>
+                      <div className="text-[10px] text-muted-foreground">Ask anything</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => insertMention("everyone")}
+                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">Everyone</div>
+                      <div className="text-[10px] text-muted-foreground">Notify all members</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => insertMention("channel")}
+                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                      <Hash className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">Channel</div>
+                      <div className="text-[10px] text-muted-foreground">Notify active members</div>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-border/40 my-1.5 mx-2" />
+
+                  {mentionMembers.slice(0, 10).map((m: any) => {
+                    const memberName = m.full_name || m.username || "Unknown";
+                    const isOnline = onlineUserIds.includes(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => insertMention(memberName)}
+                        className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
+                      >
+                        <div className="relative">
+                          {m.isSpecial ? (
+                            <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent">
+                              {m.id === "everyone" ? <Users className="w-4 h-4" /> : <Hash className="w-4 h-4" />}
+                            </div>
+                          ) : (
+                            <>
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden shadow-sm"
+                                style={{ backgroundColor: m.avatar_url ? "transparent" : stringToColor(memberName) }}
+                              >
+                                {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(memberName)}
+                              </div>
+                              <div className={cn(
+                                "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface",
+                                isOnline ? "bg-green-500" : "bg-muted-foreground/40"
+                              )} />
+                            </>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors truncate">
+                            {m.isSpecial ? `@${memberName}` : memberName}
+                          </div>
+                          {!m.isSpecial && m.username && (
+                            <div className="text-[10px] text-muted-foreground font-semibold truncate">@{m.username}</div>
+                          )}
+                          {m.isSpecial && (
+                            <div className="text-[10px] text-accent font-semibold truncate">Notify everyone in this channel</div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {mentionMembers.length === 0 && mentionQuery && (
+                    <div className="text-center py-4 text-muted-foreground text-xs font-medium">No results for "{mentionQuery}"</div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          <AnimatePresence>
+            {showSlashMenu && (
+              <motion.div 
+                ref={slashMenuRef}
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute bottom-[calc(100%+10px)] left-4 w-[260px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
+              >
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Synapse Apps Hub</div>
+                <div className="space-y-1">
+                  {slashCommands.filter(c => !input.trim().substring(1) || c.id.includes(input.trim().substring(1).toLowerCase())).map(cmd => (
+                    <button
+                      key={cmd.id}
+                      onClick={() => handleSlashCommand(cmd.id)}
+                      className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                    >
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", cmd.bg, cmd.color, "group-hover:bg-accent group-hover:text-white")}>
+                        <cmd.icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">{cmd.title}</div>
+                        <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
           {/* Toolbar */}
           <div className="bg-surface border border-border border-t-0 rounded-b-2xl overflow-hidden">
             <ChatToolbar 

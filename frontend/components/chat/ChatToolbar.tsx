@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Sparkles, Bold, Italic, Strikethrough, Code, 
   AtSign, Smile, Mic, MicOff, Paperclip, List, 
-  Link2, Quote, FileCode2, X 
+  Link2, Quote, FileCode2, X, Search 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,21 @@ interface ChatToolbarProps {
   members?: { id: string; name: string; avatar_url?: string }[];
   onMention?: (userId: string, name: string) => void;
 }
+
+const stringToColor = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xFF;
+    color += ('00' + value.toString(16)).substr(-2);
+  }
+  return color;
+};
+
+const getInitials = (name: string) => {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+};
 
 export default function ChatToolbar({ 
   inputRef, input, setInput, onFileClick, onEmojiClick, showEmoji, members, onMention 
@@ -189,38 +204,49 @@ export default function ChatToolbar({
               initial={{ opacity: 0, y: 6, scale: 0.95 }} 
               animate={{ opacity: 1, y: 0, scale: 1 }} 
               exit={{ opacity: 0, y: 6, scale: 0.95 }}
-              className="absolute bottom-[calc(100%+8px)] left-0 bg-surface border border-border rounded-xl shadow-2xl p-2 z-50 w-[220px] max-h-[250px] overflow-hidden flex flex-col"
+              className="absolute bottom-[calc(100%+8px)] left-0 bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl p-2 z-50 w-[240px] max-w-[calc(100vw-40px)] max-h-[300px] overflow-hidden flex flex-col"
             >
-              <div className="relative mb-2">
-                <AtSign className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <div className="relative mb-2 px-1">
+                <AtSign className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
                 <input 
                   type="text" 
-                  placeholder="Search members..."
+                  placeholder="Tag someone..."
                   value={mentionFilter}
                   onChange={e => setMentionFilter(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-accent/50"
+                  className="w-full bg-background/50 border border-border/50 rounded-xl pl-8 pr-3 py-2 text-xs focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all placeholder:text-muted-foreground/50 font-medium"
                   autoFocus
                 />
               </div>
-              <div className="overflow-y-auto flex-1 space-y-0.5">
-                {filteredMembers.slice(0, 10).map(m => (
+              <div className="overflow-y-auto flex-1 space-y-0.5 chat-scroll pr-1">
+                {filteredMembers.slice(0, 15).map(m => (
                   <button 
                     key={m.id}
                     onClick={() => {
-                      insertText(`@${m.name} `);
+                      // Insert mention with slugified name (standard for tagging systems)
+                      const mentionName = m.name.replace(/\s+/g, "").toLowerCase();
+                      insertText(`@${mentionName} `);
                       onMention?.(m.id, m.name);
                       setShowMentions(false);
                     }}
-                    className="flex items-center gap-2 w-full px-2.5 py-1.5 text-sm hover:bg-muted rounded-lg transition-colors"
+                    className="flex items-center gap-2.5 w-full px-2 py-1.5 text-xs hover:bg-accent/10 rounded-xl transition-all group"
                   >
-                    <div className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                      {m.name.charAt(0).toUpperCase()}
+                    <div 
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-sm flex-shrink-0 transition-transform group-hover:scale-105"
+                      style={{ backgroundColor: m.avatar_url ? "transparent" : stringToColor(m.name) }}
+                    >
+                      {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full rounded-full object-cover" /> : getInitials(m.name)}
                     </div>
-                    <span className="truncate font-medium">{m.name}</span>
+                    <div className="flex-1 min-w-0 text-left">
+                      <span className="block truncate font-bold text-foreground group-hover:text-accent transition-colors">{m.name}</span>
+                      <span className="block truncate text-[9px] text-muted-foreground font-semibold uppercase tracking-tighter">@{m.name.replace(/\s+/g, "").toLowerCase()}</span>
+                    </div>
                   </button>
                 ))}
                 {filteredMembers.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-3">No members found</p>
+                  <div className="flex flex-col items-center justify-center py-6 text-center opacity-60">
+                    <Search className="w-4 h-4 mb-2 text-muted-foreground" />
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">No members</p>
+                  </div>
                 )}
               </div>
             </motion.div>

@@ -102,11 +102,29 @@ router.get("/:id/members", async (req: Request, res: Response) => {
 
   if (error) { res.status(500).json({ error: error.message }); return; }
 
-  const members = data.map((m: Record<string, unknown>) => ({
-    ...(m.profiles as Record<string, unknown>),
-    role: m.role,
-    joined_at: m.joined_at,
+  // Sync usernames if missing
+  const members = await Promise.all(data.map(async (m: any) => {
+    const profile = m.profiles;
+    if (profile && !profile.username) {
+      const base = (profile.full_name || "user").split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      const username = `${base}${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      // Update in DB
+      await supabaseAdmin
+        .from("profiles")
+        .update({ username })
+        .eq("id", profile.id);
+      
+      profile.username = username;
+    }
+    
+    return {
+      ...profile,
+      role: m.role,
+      joined_at: m.joined_at,
+    };
   }));
+
   res.json({ members });
 });
 

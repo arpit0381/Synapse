@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, Paperclip, Smile, Phone, Video, MoreHorizontal, Search, Check, CheckCheck, X, File, Image as ImageIcon, Download, Loader2, FileText, Table, CheckSquare, Bot, Sparkle } from "lucide-react";
+import { Send, Paperclip, Smile, Phone, Video, MoreHorizontal, Search, Check, CheckCheck, X, File, Image as ImageIcon, Download, Loader2, FileText, Table, CheckSquare, Bot, Sparkle, AtSign, Users, Hash } from "lucide-react";
 import { cn, getInitials, stringToColor, formatTime, getChatDateLabel } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/appStore";
@@ -42,6 +42,8 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
   const [showInputEmoji, setShowInputEmoji] = useState(false);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionCursorStart, setMentionCursorStart] = useState(0);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -438,8 +440,35 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) setAttachment(file);
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (showMentionMenu && mentionMembers.length > 0) {
+        e.preventDefault();
+        const firstMember = mentionMembers[0];
+        insertMention(firstMember.full_name || firstMember.username || "Unknown");
+      } else {
+        e.preventDefault();
+        send();
+      }
+    } else if (e.key === "Escape") {
+      setShowMentionMenu(false);
+      setShowSlashMenu(false);
+    }
+  };
+
   const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
+    const cursorPos = e.target.selectionStart;
     setInput(val);
     
     if (val === "/") {
@@ -448,10 +477,30 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
       setShowSlashMenu(false);
     }
 
-    if (val.endsWith("@")) {
-      setShowMentionMenu(true);
-    } else if (!val.includes("@")) {
+    // Smart @mention detection: look backward from cursor for the @ symbol
+    const textBeforeCursor = val.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+    if (lastAtIndex !== -1) {
+      const charBefore = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : " ";
+      // Only trigger if @ is at start or preceded by whitespace
+      if (lastAtIndex === 0 || /\s/.test(charBefore)) {
+        const query = textBeforeCursor.substring(lastAtIndex + 1);
+        // Only show if there's no space in the query (single word mention)
+        if (!/\s/.test(query) || query.length === 0) {
+          setShowMentionMenu(true);
+          setMentionQuery(query);
+          setMentionCursorStart(lastAtIndex);
+        } else {
+          setShowMentionMenu(false);
+          setMentionQuery("");
+        }
+      } else {
+        setShowMentionMenu(false);
+        setMentionQuery("");
+      }
+    } else {
       setShowMentionMenu(false);
+      setMentionQuery("");
     }
 
     const socket = getSocket();
@@ -496,6 +545,30 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
     
     router.push(`/apps/${type}/${newFile.id}`);
   };
+
+  // Insert a mention at the tracked @ position
+  function insertMention(name: string) {
+    const mentionName = name.replace(/\s+/g, "").toLowerCase();
+    const before = input.substring(0, mentionCursorStart);
+    const after = input.substring(mentionCursorStart + 1 + mentionQuery.length);
+    const newVal = `${before}@${mentionName} ${after}`;
+    setInput(newVal);
+    setShowMentionMenu(false);
+    setMentionQuery("");
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const newCursor = mentionCursorStart + mentionName.length + 2; // @name + space
+      inputRef.current?.setSelectionRange(newCursor, newCursor);
+    }, 0);
+  }
+
+  // Filtered members for mention dropdown
+  const mentionMembers = (membersData?.members || []).filter((m: any) => {
+    if (!mentionQuery) return true;
+    const q = mentionQuery.toLowerCase();
+    const name = (m.full_name || m.username || "").toLowerCase();
+    return name.includes(q);
+  });
 
   const groups: { label: string; messages: any[] }[] = [];
   let cur = "";
@@ -660,22 +733,22 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
 
           <textarea
             ref={inputRef}
+            rows={1}
             value={input}
             onChange={handleTyping}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder={`Message ${dmUser.name}... (type '/' for apps)`}
-            rows={1}
-            className="flex-1 bg-transparent text-[14px] text-foreground placeholder:text-muted-foreground/60 py-3.5 px-2 resize-none outline-none max-h-[160px] leading-relaxed"
-            style={{ minHeight: "48px" }}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={`Message ${dmUser.name}...`}
+            className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-[14.5px] text-foreground placeholder:text-muted-foreground/50 py-3.5 px-1 resize-none min-h-[50px] max-h-[200px] chat-scroll"
           />
-          <div className="flex items-center gap-0.5 px-2 py-2 flex-shrink-0 self-end z-10 relative">
+
             <AnimatePresence>
               {showInputEmoji && (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                  className="absolute bottom-[calc(100%+12px)] right-0 w-[300px] h-[320px] bg-surface border border-border rounded-2xl shadow-2xl overflow-y-auto z-50 p-3"
+                  className="absolute bottom-[calc(100%+12px)] right-2 w-[300px] h-[320px] bg-surface border border-border rounded-2xl shadow-2xl overflow-y-auto z-50 p-3"
                 >
                   <div className="grid grid-cols-7 gap-0.5">
                     {EMOJI_FULL.map(emoji => (
@@ -685,69 +758,6 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
                         className="flex items-center justify-center aspect-square text-xl hover:bg-muted rounded-xl transition-all hover:scale-110"
                       >
                         {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-              {showMentionMenu && (
-                <motion.div 
-                  ref={mentionMenuRef}
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute bottom-[calc(100%+12px)] left-0 w-[240px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
-                >
-                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Mentions</div>
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => {
-                        setInput(prev => prev + "synapse ");
-                        setShowMentionMenu(false);
-                        inputRef.current?.focus();
-                      }}
-                      className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
-                        <Bot className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">Synapse AI</div>
-                        <div className="text-[10px] text-muted-foreground">Ask anything</div>
-                      </div>
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-              {showSlashMenu && (
-                <motion.div 
-                  ref={slashMenuRef}
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute bottom-[calc(100%+10px)] left-[-40px] w-[260px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
-                >
-                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Synapse Apps Hub</div>
-                  <div className="space-y-1">
-                    {slashCommands.filter(c => !input.trim().substring(1) || c.id.includes(input.trim().substring(1).toLowerCase())).map(cmd => (
-                      <button
-                        key={cmd.id}
-                        onClick={() => handleSlashCommand(cmd.id)}
-                        className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
-                      >
-                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", cmd.bg, cmd.color, "group-hover:bg-accent group-hover:text-white")}>
-                          <cmd.icon className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">{cmd.title}</div>
-                          <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
-                        </div>
                       </button>
                     ))}
                   </div>
@@ -765,8 +775,108 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
             >
               {sendMutation.isPending ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <Send className="w-[18px] h-[18px]" style={{ marginLeft: "2px" }} />}
             </motion.button>
+
+          <AnimatePresence>
+            {showMentionMenu && (
+              <motion.div 
+                ref={mentionMenuRef}
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute bottom-[calc(100%+12px)] left-4 w-[280px] max-w-[calc(100vw-40px)] bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col"
+              >
+                <div className="px-3.5 pt-3.5 pb-2 flex items-center gap-2 border-b border-border/30">
+                  <AtSign className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-[10px] font-bold text-foreground/70 uppercase tracking-widest">Mention</span>
+                  {mentionQuery && (
+                    <span className="text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full font-bold ml-auto">@{mentionQuery}</span>
+                  )}
+                </div>
+                <div className="max-h-[280px] overflow-y-auto p-1.5 space-y-0.5 chat-scroll">
+                  <button
+                    onClick={() => insertMention("synapse")}
+                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">Synapse AI</div>
+                      <div className="text-[10px] text-muted-foreground">Ask anything</div>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-border/40 my-1.5 mx-2" />
+
+                  {mentionMembers.slice(0, 10).map((m: any) => {
+                    const memberName = m.full_name || m.username || "Unknown";
+                    const isOnline = onlineUserIds.includes(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => insertMention(memberName)}
+                        className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-accent/10 transition-colors text-left group"
+                      >
+                        <div className="relative">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden shadow-sm"
+                            style={{ backgroundColor: m.avatar_url ? "transparent" : stringToColor(memberName) }}
+                          >
+                            {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(memberName)}
+                          </div>
+                          <div className={cn(
+                            "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface",
+                            isOnline ? "bg-green-500" : "bg-muted-foreground/40"
+                          )} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-foreground group-hover:text-accent transition-colors truncate">{memberName}</div>
+                          {m.username && <div className="text-[10px] text-muted-foreground font-semibold truncate">@{m.username}</div>}
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {mentionMembers.length === 0 && mentionQuery && (
+                    <div className="text-center py-4 text-muted-foreground text-xs font-medium">No results for "{mentionQuery}"</div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showSlashMenu && (
+              <motion.div 
+                ref={slashMenuRef}
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute bottom-[calc(100%+10px)] left-4 w-[260px] bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-2"
+              >
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2 pt-1">Synapse Apps Hub</div>
+                <div className="space-y-1">
+                  {slashCommands.filter(c => !input.trim().substring(1) || c.id.includes(input.trim().substring(1).toLowerCase())).map(cmd => (
+                    <button
+                      key={cmd.id}
+                      onClick={() => handleSlashCommand(cmd.id)}
+                      className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left group"
+                    >
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", cmd.bg, cmd.color, "group-hover:bg-accent group-hover:text-white")}>
+                        <cmd.icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">{cmd.title}</div>
+                        <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           </div>
-        </div>
         {/* Toolbar */}
         <div className={cn("bg-surface border border-border/60 border-t-0 rounded-b-2xl overflow-hidden", (replyTo || attachment) ? "" : "")}>
           <ChatToolbar 
@@ -839,6 +949,49 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
   );
 }
 
+// ── Mention Renderer: Highlights @mentions inside messages ────────────
+function MentionRenderer({ content, isMe, isAI }: { content: string; isMe: boolean; isAI: boolean }) {
+  const { user } = useAppStore();
+  const mentionRegex = /(@[\w.]+)/g;
+  const parts = content.split(mentionRegex);
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (mentionRegex.test(part)) {
+          mentionRegex.lastIndex = 0; // reset regex state
+          const name = part.slice(1).toLowerCase();
+          const isSelfMention =
+            user && (
+              (user.name || "").toLowerCase().includes(name) ||
+              (user.username || "").toLowerCase().includes(name) ||
+              name === "everyone" || name === "channel" || name === "synapse"
+            );
+
+          if (isMe && !isAI) {
+            return <span key={i} className="font-bold underline underline-offset-2">{part}</span>;
+          }
+
+          return (
+            <span
+              key={i}
+              className={cn(
+                "px-1 rounded-md font-semibold transition-colors",
+                isSelfMention 
+                  ? "bg-accent/20 text-accent border border-accent/20 shadow-sm animate-pulse-subtle" 
+                  : "bg-muted/50 text-foreground border border-border/50"
+              )}
+            >
+              {part}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 // ── Message Bubble Component ──────────────────────────────────────────────
 function MessageBubble({ msg, isMe, isLast, onRead, onReact, onReply }: any) {
   const ref = useRef<HTMLDivElement>(null);
@@ -896,7 +1049,9 @@ function MessageBubble({ msg, isMe, isLast, onRead, onReact, onReply }: any) {
               <div className="truncate max-w-[220px] opacity-80">{msg.metadata.reply_to.content}</div>
             </div>
           )}
-          <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+          <div className="leading-relaxed whitespace-pre-wrap break-words">
+            <MentionRenderer content={msg.content} isMe={isMe} isAI={isAI} />
+          </div>
 
           {msg.metadata?.attachment && (
             <div className="mt-2 relative">
