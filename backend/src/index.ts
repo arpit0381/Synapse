@@ -215,8 +215,37 @@ io.on("connection", (socket) => {
   });
 
   // ── DM ─────────────────────────────────────────────────────────
-  socket.on("send_dm", (msg: { id: string; toUserId: string; fromUserId: string; content: string; timestamp: string }) => {
+  socket.on("send_dm", async (msg: { id: string; workspaceId: string; toUserId: string; fromUserId: string; fromUserName: string; content: string; timestamp: string }) => {
     io.to(`user:${msg.toUserId}`).emit("new_dm", msg);
+
+    // Persist notification to DB
+    await supabaseAdmin.from("notifications").insert({
+      user_id: msg.toUserId,
+      workspace_id: msg.workspaceId,
+      type: "dm",
+      title: "New message",
+      body: msg.content.slice(0, 80),
+      link: `/dm/${msg.fromUserId}`,
+      metadata: { from_user_id: msg.fromUserId, message_id: msg.id },
+    });
+
+    // Emit rich DM notification for toast
+    io.to(`user:${msg.toUserId}`).emit("notification:dm", {
+      type: "dm",
+      title: `Message from ${msg.fromUserName}`,
+      body: msg.content.slice(0, 120),
+      senderName: msg.fromUserName,
+      senderId: msg.fromUserId,
+      messageId: msg.id,
+    });
+
+    // Also emit generic notification:new for badge count
+    io.to(`user:${msg.toUserId}`).emit("notification:new", {
+      type: "dm",
+      title: `New message from ${msg.fromUserName}`,
+      body: msg.content.slice(0, 120),
+      link: `/dm/${msg.fromUserId}`,
+    });
   });
 
   socket.on("join_dm", ({ userId }: { userId: string }) => {

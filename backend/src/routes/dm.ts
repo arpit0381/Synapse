@@ -81,6 +81,28 @@ router.post("/", async (req: Request, res: Response) => {
     metadata: { from_user_id, message_id: msg.id },
   });
 
+  // Safely extract sender name (handle potential array from Supabase join)
+  const sender = Array.isArray(msg.sender) ? msg.sender[0] : msg.sender;
+  const senderName = sender?.full_name || "Someone";
+
+  // Emit rich DM notification for toast
+  io.to(`user:${to_user_id}`).emit("notification:dm", {
+    type: "dm",
+    title: `Message from ${senderName}`,
+    body: content.slice(0, 120),
+    senderName: senderName,
+    senderId: from_user_id,
+    messageId: msg.id,
+  });
+
+  // Also emit generic notification:new for badge count
+  io.to(`user:${to_user_id}`).emit("notification:new", {
+    type: "dm",
+    title: `New message from ${senderName}`,
+    body: content.slice(0, 120),
+    link: `/dm/${from_user_id}`,
+  });
+
   res.status(201).json({ message: msg });
 });
 

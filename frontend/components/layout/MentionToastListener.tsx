@@ -19,6 +19,15 @@ interface MentionNotification {
   mentionType: "user" | "everyone" | "channel";
 }
 
+interface DMNotification {
+  type: "dm";
+  title: string;
+  body: string;
+  senderName: string;
+  senderId: string;
+  messageId: string;
+}
+
 export function MentionToastListener() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -238,10 +247,90 @@ export function MentionToastListener() {
       );
     };
 
+    const handleDMNotification = (data: DMNotification) => {
+      if (data.senderId === user.id) return;
+      playNotificationSound();
+      setUnreadNotifications(unreadNotifications + 1);
+      queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+
+      toast.custom(
+        (t) => (
+          <div
+            className={`mention-toast ${t.visible ? "mention-toast-enter" : "mention-toast-exit"}`}
+            style={{
+              maxWidth: "420px",
+              width: "100%",
+              background: "linear-gradient(135deg, hsl(var(--surface)) 0%, hsl(var(--background)) 100%)",
+              border: "1px solid hsl(var(--border))",
+              borderLeft: "4px solid hsl(var(--accent))",
+              borderRadius: "16px",
+              padding: "16px 18px",
+              boxShadow: "0 20px 60px -15px rgba(0,0,0,0.3), 0 0 30px -10px rgba(var(--accent-rgb),0.15)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "14px",
+              backdropFilter: "blur(20px)",
+              animation: t.visible
+                ? "mentionSlideIn 0.4s cubic-bezier(0.21, 1.02, 0.73, 1)"
+                : "mentionSlideOut 0.3s cubic-bezier(0.06, 0.71, 0.55, 1)",
+            }}
+            onClick={() => {
+              router.push(`/dm/${data.senderId}`);
+              toast.dismiss(t.id);
+            }}
+          >
+            <div
+              style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                background: "linear-gradient(135deg, hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15), hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.05))",
+                border: "1px solid hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.2)",
+              }}
+            >
+              <ArrowRight style={{ width: "22px", height: "22px", color: "hsl(var(--accent))", transform: "rotate(-45deg)" }} />
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "hsl(var(--foreground))", letterSpacing: "-0.01em" }}>
+                  {data.senderName}
+                </span>
+                <span style={{ fontSize: "9px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 6px", borderRadius: "6px", background: "hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12)", color: "hsl(var(--accent))" }}>
+                  Direct Message
+                </span>
+              </div>
+              <p style={{ fontSize: "13px", color: "hsl(var(--muted-foreground))", lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "280px" }}>
+                {data.body}
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "8px", fontSize: "11px", fontWeight: 600, color: "hsl(var(--accent))", opacity: 0.8 }}>
+                Reply now <ArrowRight style={{ width: "12px", height: "12px" }} />
+              </div>
+            </div>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); toast.dismiss(t.id); }}
+              style={{ padding: "4px", borderRadius: "8px", border: "none", background: "transparent", cursor: "pointer", color: "hsl(var(--muted-foreground))", opacity: 0.5, flexShrink: 0 }}
+            >
+              <X style={{ width: "16px", height: "16px" }} />
+            </button>
+          </div>
+        ),
+        { duration: 6000, position: "top-right" }
+      );
+    };
+
     socket.on("notification:mention", handleMentionNotification);
+    socket.on("notification:dm", handleDMNotification);
 
     return () => {
       socket.off("notification:mention", handleMentionNotification);
+      socket.off("notification:dm", handleDMNotification);
     };
   }, [user?.id, playNotificationSound, router, setUnreadNotifications, unreadNotifications, queryClient]);
 

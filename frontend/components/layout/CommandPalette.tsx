@@ -191,8 +191,16 @@ export function CommandPalette() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-[600px] bg-surface border border-border rounded-2xl shadow-2xl z-[101] overflow-hidden"
+            className="fixed top-0 sm:top-[15%] left-0 sm:left-1/2 sm:-translate-x-1/2 w-full h-full sm:h-auto sm:max-w-[600px] bg-surface sm:border border-border sm:rounded-2xl shadow-2xl z-[101] overflow-hidden flex flex-col"
           >
+            {/* Mobile Header (Dismiss button) */}
+            <div className="sm:hidden flex items-center justify-between px-5 py-3 border-b border-border bg-muted/30">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Search Synapse</span>
+              <button onClick={() => setCommandPaletteOpen(false)} className="p-1 rounded-lg hover:bg-muted transition-colors">
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+
             {/* Search Input */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
               <Search className="w-5 h-5 text-muted-foreground flex-shrink-0" />
@@ -211,7 +219,7 @@ export function CommandPalette() {
             </div>
 
             {/* Results */}
-            <div className="max-h-[400px] overflow-y-auto py-2">
+            <div className="flex-1 sm:max-h-[400px] overflow-y-auto py-2">
               {!query.trim() && (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <Search className="w-10 h-10 mb-3 opacity-30" />

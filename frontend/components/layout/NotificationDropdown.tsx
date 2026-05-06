@@ -112,13 +112,27 @@ export function NotificationDropdown() {
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -5, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -5, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-[380px] max-h-[480px] bg-surface border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
-          >
+          <>
+            {/* Mobile Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99] sm:hidden"
+              onClick={() => setIsOpen(false)}
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, y: -5, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -5, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className={cn(
+                "fixed sm:absolute inset-x-4 sm:inset-auto sm:right-0 top-[15%] sm:top-full mt-0 sm:mt-2",
+                "w-auto sm:w-[380px] max-h-[70vh] sm:max-h-[480px]",
+                "bg-surface border border-border rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col"
+              )}
+            >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -142,7 +156,7 @@ export function NotificationDropdown() {
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto max-h-[400px]">
+            <div className="flex-1 overflow-y-auto sm:max-h-[400px]">
               {isLoading && (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-5 h-5 animate-spin text-accent" />
@@ -182,7 +196,8 @@ export function NotificationDropdown() {
               )}
             </div>
           </motion.div>
-        )}
+        </>
+      )}
       </AnimatePresence>
     </div>
   );

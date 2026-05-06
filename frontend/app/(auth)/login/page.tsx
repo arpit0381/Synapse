@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Zap, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { signInWithEmail, signInWithGoogle } from "@/lib/supabase";
 import { useAppStore } from "@/store/appStore";
@@ -18,7 +18,9 @@ const FEATURES = [
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setAuth } = useAppStore();
+  const redirect = searchParams.get("redirect");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,7 +47,7 @@ export default function LoginPage() {
           },
           data.session?.access_token || ""
         );
-        router.push("/dashboard");
+        router.push(redirect || "/dashboard");
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Login failed";
@@ -72,7 +74,7 @@ export default function LoginPage() {
       { id: "demo-user", name: "Aryan Sharma", email: "aryan@synapse.app", status: "online", status_message: "Shipping features 🚀" },
       "demo-token"
     );
-    router.push("/dashboard");
+    router.push(redirect || "/dashboard");
   }
 
   return (

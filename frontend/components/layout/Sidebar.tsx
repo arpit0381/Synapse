@@ -14,7 +14,7 @@ import { useCallStore } from "@/store/callStore";
 import { cn, getInitials, stringToColor } from "@/lib/utils";
 import { CreateChannelModal } from "@/components/modals/CreateChannelModal";
 import { WorkspaceSwitcherModal } from "@/components/modals/WorkspaceSwitcherModal";
-import { PulseModal } from "@/components/modals/PulseModal";
+import { InviteModal } from "@/components/modals/InviteModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
@@ -116,7 +116,7 @@ export default function Sidebar() {
 
   const [isCreateChannelOpen, setCreateChannelOpen] = useState(false);
   const [isWorkspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false);
-  const [isPulseOpen, setPulseOpen] = useState(false);
+  const [isInviteModalOpen, setInviteModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const isChatRoute = pathname === "/dashboard" || pathname === "/" || pathname.startsWith("/channels") || pathname.startsWith("/dm");
@@ -261,7 +261,7 @@ export default function Sidebar() {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <RailTooltip key={item.href} label={item.label}>
-                  <Link href={item.href} onClick={() => setSidebarOpen(true)} className="w-full flex flex-col items-center group/rail">
+                  <Link href={item.href} onClick={() => setSidebarOpen(false)} className="w-full flex flex-col items-center group/rail">
                     <div className="relative flex flex-col items-center py-2 w-full">
                       {/* Active indicator line */}
                       {isActive && (
@@ -286,24 +286,11 @@ export default function Sidebar() {
 
           <div className="w-8 h-px bg-white/20 my-4" />
 
-          {/* Pulse / Workspace Intelligence */}
-          <div className="flex flex-col items-center gap-4 w-full">
-            <RailTooltip label="Synapse Pulse">
-              <button 
-                onClick={() => setPulseOpen(true)}
-                className="flex flex-col items-center group/pulse btn-press"
-              >
-                <div className="w-[46px] h-[46px] rounded-2xl bg-gradient-to-tr from-[#FF3D00] to-[#FF9100] flex items-center justify-center shadow-lg group-hover/pulse:scale-110 group-hover/pulse:rotate-12 transition-all duration-300 relative overflow-hidden ring-2 ring-orange-500/20">
-                  <Activity className="w-6 h-6 text-white relative z-10 animate-pulse" />
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/pulse:opacity-100 transition-opacity" />
-                </div>
-                <span className="text-[10px] font-black text-white mt-1.5 tracking-tighter uppercase">Pulse</span>
-              </button>
-            </RailTooltip>
-
+          {/* Bottom Rail Section */}
+          <div className="flex flex-col items-center gap-4 w-full pb-2">
             {displayUser && (
               <RailTooltip label="Profile Settings">
-                <Link href="/settings/profile" className="relative group/profile btn-press">
+                <Link href="/settings/profile" onClick={() => setSidebarOpen(false)} className="relative group/profile btn-press">
                   <div className="w-11 h-11 rounded-full p-0.5 bg-gradient-to-br from-white/30 to-white/10 group-hover/profile:from-white group-hover/profile:to-white/50 transition-all duration-300">
                     <div className="w-full h-full rounded-full bg-surface flex items-center justify-center overflow-hidden border-[1.5px] border-[#4B39EF] text-white font-bold text-xs" style={{ backgroundColor: displayUser.avatar_url ? 'transparent' : stringToColor(displayUser.name) }}>
                       {displayUser.avatar_url ? <img src={displayUser.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(displayUser.name)}
@@ -345,7 +332,7 @@ export default function Sidebar() {
                 {CONTEXT_MENU.map((item) => {
                   const isActive = pathname === item.href;
                   return (
-                    <Link key={item.label} href={item.href}>
+                    <Link key={item.label} href={item.href} onClick={() => setSidebarOpen(false)}>
                       <div className={cn("flex items-center gap-3 px-3 py-2 rounded-xl text-[14px] font-medium transition-all duration-200 group relative", isActive ? "bg-accent/10 text-accent font-semibold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
                         <item.icon className={cn("w-[18px] h-[18px] transition-transform duration-200", !isActive && "group-hover:scale-110")} />
                         <span className="flex-1">{item.label}</span>
@@ -367,7 +354,7 @@ export default function Sidebar() {
                   const activeCall = callStore.activeGroupCalls[ch.id];
                   const unread = (ch as any).unread_count ?? 0;
                   return (
-                    <Link key={ch.id} href={`/channels/${ch.id}`}>
+                    <Link key={ch.id} href={`/channels/${ch.id}`} onClick={() => setSidebarOpen(false)}>
                       <div className={cn("flex items-center gap-2.5 px-3 py-2 rounded-xl mx-2 text-[14px] transition-all duration-200 group/ch", isActive ? "bg-accent/10 text-accent font-semibold" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground")}>
                         <Hash className={cn("w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200", isActive ? "text-accent" : "text-muted-foreground/60 group-hover/ch:rotate-12")} />
                         <span className={cn("flex-1 truncate", unread > 0 && !isActive && "text-foreground font-bold")}>{(ch as any).name}</span>
@@ -383,6 +370,14 @@ export default function Sidebar() {
                     </Link>
                   );
                 })}
+                {/* Master Create Button */}
+                <button 
+                  onClick={() => setCreateChannelOpen(true)}
+                  className="w-[calc(100%-24px)] mx-3 mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-bold text-accent bg-accent/5 hover:bg-accent/10 border border-accent/20 border-dashed transition-all active:scale-95 group"
+                >
+                  <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+                  Create a channel
+                </button>
               </SidebarSection>
 
               {/* Private Channels */}
@@ -391,7 +386,7 @@ export default function Sidebar() {
                   {privateChannels.map((ch) => {
                     const isActive = pathname.includes(ch.id);
                     return (
-                      <Link key={ch.id} href={`/channels/${ch.id}`}>
+                      <Link key={ch.id} href={`/channels/${ch.id}`} onClick={() => setSidebarOpen(false)}>
                         <div className={cn("flex items-center gap-2.5 px-3 py-2 rounded-xl mx-2 text-[14px] transition-all duration-200", isActive ? "bg-accent/10 text-accent font-semibold" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground")}>
                           <Lock className={cn("w-[18px] h-[18px] flex-shrink-0", isActive ? "text-accent" : "text-muted-foreground/60")} />
                           <span className="flex-1 truncate">{ch.name}</span>
@@ -411,7 +406,7 @@ export default function Sidebar() {
                   const status = getStatus(partner.id);
                   const unread = dm.unread || 0;
                   return (
-                    <Link key={partner.id} href={`/dm/${partner.id}`}>
+                    <Link key={partner.id} href={`/dm/${partner.id}`} onClick={() => setSidebarOpen(false)}>
                       <div className={cn("flex items-center gap-3 px-3 py-2 rounded-xl mx-2 transition-all duration-200", isActive ? "bg-accent/10 text-accent" : "hover:bg-muted/50")}>
                         <div className="relative flex-shrink-0 shadow-sm">
                           <div className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden ring-1 ring-border/50" style={{ backgroundColor: stringToColor(partnerName) }}>
@@ -425,6 +420,14 @@ export default function Sidebar() {
                     </Link>
                   );
                 })}
+                {/* Invite Button */}
+                <button 
+                  onClick={() => setInviteModalOpen(true)}
+                  className="w-[calc(100%-24px)] mx-3 mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-bold text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/20 border-dashed transition-all active:scale-95 group"
+                >
+                  <Users className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  Invite people
+                </button>
               </SidebarSection>
 
             </div>
@@ -434,7 +437,7 @@ export default function Sidebar() {
 
       <CreateChannelModal isOpen={isCreateChannelOpen} onClose={() => setCreateChannelOpen(false)} />
       <WorkspaceSwitcherModal isOpen={isWorkspaceSwitcherOpen} onClose={() => setWorkspaceSwitcherOpen(false)} />
-      <PulseModal isOpen={isPulseOpen} onClose={() => setPulseOpen(false)} />
+      <InviteModal isOpen={isInviteModalOpen} onClose={() => setInviteModalOpen(false)} />
     </>
   );
 }
