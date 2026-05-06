@@ -26,7 +26,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
 
     const joinWorkspace = async () => {
       try {
-        const { workspace, message } = await api.workspaces.join(code, user!.id);
+        const { workspace, message } = await api.workspaces.join({ invite_code: code, user_id: user!.id });
         setWorkspaceName(workspace.name);
         
         // Refresh workspace list
