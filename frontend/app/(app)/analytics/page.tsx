@@ -46,17 +46,22 @@ export default function AnalyticsPage() {
   const maxContribCount = contributors[0]?.count || 1;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 animate-fade-in pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-display font-bold text-2xl tracking-tight flex items-center gap-2"><BarChart3 className="w-6 h-6 text-accent" />Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">Workspace activity for {currentWorkspace?.name || "workspace"}</p>
+          <h1 className="font-display font-black text-fluid-2xl tracking-tight flex items-center gap-2.5">
+            <BarChart3 className="w-7 h-7 text-accent" />
+            Analytics
+          </h1>
+          <p className="text-fluid-xs font-medium text-muted-foreground mt-1.5 opacity-70">Workspace activity for {currentWorkspace?.name || "workspace"}</p>
         </div>
-        <select value={messageDays} onChange={(e) => setMessageDays(Number(e.target.value))} className="bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent">
-          <option value={7}>Last 7 days</option><option value={14}>Last 14 days</option><option value={30}>Last 30 days</option>
+        <select value={messageDays} onChange={(e) => setMessageDays(Number(e.target.value))} className="bg-surface border border-border/60 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-accent/50 transition-all shadow-sm">
+          <option value={7}>Last 7 days</option>
+          <option value={14}>Last 14 days</option>
+          <option value={30}>Last 30 days</option>
         </select>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard icon={MessageCircle} label="Total Messages" value={totalMessages} change={msgChange} color="text-purple-400" bgColor="bg-purple-500/10" />
         <StatCard icon={Users} label="Team Members" value={memberData?.total || 0} color="text-blue-400" bgColor="bg-blue-500/10" />
         <StatCard icon={CheckSquare} label="Total Tasks" value={taskData?.total || 0} color="text-teal-400" bgColor="bg-teal-500/10" />

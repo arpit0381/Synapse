@@ -113,23 +113,23 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between px-4 sm:px-6 py-4 border-b border-border flex-shrink-0 gap-4">
         <div>
           <h1 className="font-display font-bold text-lg text-foreground">Tasks</h1>
-          <p className="text-xs text-muted-foreground">{filtered.filter(t => t.status !== "done").length} open · {filtered.filter(t => t.status === "done").length} done</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">{filtered.filter(t => t.status !== "done").length} open · {filtered.filter(t => t.status === "done").length} done</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <div className="relative flex-1 md:flex-none min-w-[140px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks…"
-              className="bg-muted border border-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-foreground outline-none focus:border-accent/50 w-44" />
+              className="bg-muted border border-border rounded-lg pl-9 pr-3 py-2 md:py-1.5 text-xs text-foreground outline-none focus:border-accent/50 w-full md:w-44" />
           </div>
           <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
             <button onClick={() => setView("kanban")} className={cn("p-1.5 rounded-md transition-colors", view === "kanban" ? "bg-surface text-accent" : "text-muted-foreground")}><LayoutGrid className="w-3.5 h-3.5" /></button>
             <button onClick={() => setView("list")} className={cn("p-1.5 rounded-md transition-colors", view === "list" ? "bg-surface text-accent" : "text-muted-foreground")}><List className="w-3.5 h-3.5" /></button>
           </div>
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl accent-gradient text-white text-sm font-semibold shadow-accent-glow">
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl accent-gradient text-white text-xs sm:text-sm font-semibold shadow-accent-glow">
             <Plus className="w-4 h-4" /> New Task
           </motion.button>
         </div>
@@ -157,12 +157,12 @@ export default function TasksPage() {
 
       {/* Kanban */}
       {view === "kanban" && (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="flex gap-4 h-full px-6 py-4 min-w-max">
+        <div className="flex-1 overflow-hidden">
+          <div className="flex h-full px-4 sm:px-6 py-4 kanban-scroll">
             {COLUMNS.map(col => {
               const colTasks = filtered.filter(t => t.status === col.id);
               return (
-                <div key={col.id} className="flex flex-col w-72 flex-shrink-0">
+                <div key={col.id} className="flex flex-col w-72 flex-shrink-0 kanban-column-mobile">
                   <div className="flex items-center gap-2 mb-3">
                     <span className={cn("font-semibold text-sm", col.color)}>{col.label}</span>
                     <span className="ml-auto text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">{colTasks.length}</span>

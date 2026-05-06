@@ -79,7 +79,7 @@ export function PulseModal({ isOpen, onClose }: PulseModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-10">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6 md:p-10">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -91,24 +91,24 @@ export function PulseModal({ isOpen, onClose }: PulseModalProps) {
 
           {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.9, y: 100 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-6xl h-[85vh] bg-[#0A0A0B] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row"
+            exit={{ opacity: 0, scale: 0.9, y: 100 }}
+            className="relative w-full max-w-6xl h-[92vh] sm:h-[85vh] bg-[#0A0A0B] border-t sm:border border-white/10 rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row"
           >
             {/* Sidebar / Tabs */}
-            <div className="w-full md:w-[280px] bg-white/[0.02] border-r border-white/5 p-6 flex flex-col">
-              <div className="flex items-center gap-3 mb-10">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+            <div className="w-full md:w-[280px] bg-white/[0.02] border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-6 flex flex-col md:flex-col overflow-x-auto md:overflow-visible no-scrollbar">
+              <div className="flex md:flex-col items-center md:items-start gap-4 mb-4 md:mb-10 flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
                   <Activity className="w-6 h-6 text-white animate-pulse" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white tracking-tight">Synapse Pulse</h2>
-                  <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Workspace Intelligence</p>
+                <div className="min-w-0">
+                  <h2 className="text-lg md:text-xl font-bold text-white tracking-tight truncate">Synapse Pulse</h2>
+                  <p className="hidden md:block text-[10px] text-white/40 uppercase font-bold tracking-widest">Workspace Intelligence</p>
                 </div>
               </div>
 
-              <div className="flex-1 space-y-2">
+              <div className="flex md:flex-col gap-2 md:gap-2 flex-1">
                 {[
                   { id: "overview", label: "Overview", icon: Globe, color: "text-blue-400" },
                   { id: "intelligence", label: "AI Insights", icon: Brain, color: "text-purple-400" },
@@ -118,14 +118,14 @@ export function PulseModal({ isOpen, onClose }: PulseModalProps) {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 group",
+                      "flex-1 md:w-full flex items-center justify-center md:justify-start gap-2.5 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl transition-all duration-300 group whitespace-nowrap",
                       activeTab === tab.id 
-                        ? "bg-white/10 text-white" 
-                        : "text-white/50 hover:bg-white/5 hover:text-white"
+                        ? "bg-white/10 text-white shadow-lg" 
+                        : "text-white/40 hover:bg-white/5 hover:text-white"
                     )}
                   >
-                    <tab.icon className={cn("w-5 h-5", activeTab === tab.id ? tab.color : "text-current")} />
-                    <span className="font-semibold text-sm">{tab.label}</span>
+                    <tab.icon className={cn("w-4 h-4 md:w-5 md:h-5", activeTab === tab.id ? tab.color : "text-current")} />
+                    <span className="font-bold text-[10px] md:text-sm uppercase md:capitalize tracking-wider md:tracking-normal">{tab.label}</span>
                     {activeTab === tab.id && (
                       <motion.div layoutId="tab-active" className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
                     )}

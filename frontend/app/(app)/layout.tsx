@@ -6,6 +6,7 @@ import TopBar from "@/components/layout/TopBar";
 import { AppInitializer } from "@/components/providers/AppInitializer";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { MentionToastListener } from "@/components/layout/MentionToastListener";
+import BottomNav from "@/components/layout/BottomNav";
 import { Toaster } from "react-hot-toast";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -43,14 +44,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* TopBar */}
         <TopBar />
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto pb-[var(--bottom-nav-height)] lg:pb-0">
           {children}
         </main>
+
+        {/* Bottom Nav (Mobile Only) */}
+        <BottomNav />
       </div>
     </div>
   );

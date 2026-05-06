@@ -95,11 +95,11 @@ export default function DashboardPage() {
           <motion.h1
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="font-display text-2xl md:text-4xl font-black text-foreground tracking-tight"
+            className="font-display text-fluid-3xl font-black text-foreground tracking-tight"
           >
             {greeting}, {displayUser.name.split(" ")[0]} {emoji}
           </motion.h1>
-          <p className="text-sm font-medium text-muted-foreground mt-2 md:mt-3 px-1">
+          <p className="text-fluid-sm font-medium text-muted-foreground mt-2 md:mt-3 px-1">
             <span className="hidden sm:inline">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · </span>
             You have <span className="text-accent font-bold">{tasks.length} active tasks</span>
           </p>
@@ -141,8 +141,8 @@ export default function DashboardPage() {
                   {stat.change}
                 </span>
               </div>
-              <div className="font-display text-3xl md:text-4xl font-black text-foreground mb-1 group-hover:scale-105 transition-transform origin-left">{stat.value}</div>
-              <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">{stat.label}</div>
+              <div className="font-display text-fluid-3xl font-black text-foreground mb-1 group-hover:scale-105 transition-transform origin-left">{stat.value}</div>
+              <div className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">{stat.label}</div>
             </motion.div>
           ))
         }

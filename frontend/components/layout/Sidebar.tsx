@@ -229,15 +229,16 @@ export default function Sidebar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
           />
         )}
       </AnimatePresence>
 
       <div className={cn(
-        "fixed left-0 top-0 bottom-0 z-50 flex h-full transition-transform duration-300 ease-in-out",
+        "fixed left-0 top-0 bottom-0 z-50 flex h-full transition-all duration-[400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
         "lg:relative lg:z-auto",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        "md:flex", // Always show on tablet+ (as icon rail or full)
       )}>
 
         {/* ── Icon Rail (Primary Nav) ── */}
@@ -319,7 +320,10 @@ export default function Sidebar() {
         <div
           className={cn(
             "bg-surface/95 backdrop-blur-xl border-r border-border/60 overflow-hidden flex flex-col h-full z-40 shadow-2xl lg:shadow-none transition-all duration-[400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
-            (sidebarOpen && isChatRoute) ? "w-[260px] opacity-100" : "w-0 border-r-0 opacity-0"
+            "w-[260px] opacity-100", // Default width
+            "hidden xl:flex", // Only show secondary panel on desktop (xl+) by default
+            sidebarOpen && "flex", // Show on mobile/tablet when toggled
+            (!isChatRoute && !sidebarOpen) && "xl:w-0 xl:border-r-0 xl:opacity-0"
           )}
         >
           <div className="w-[260px] flex flex-col h-full">

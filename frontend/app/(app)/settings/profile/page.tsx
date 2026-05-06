@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Camera, Mail, Lock, Save, Loader2, Check, Globe } from "lucide-react";
+import { User, Camera, Mail, Lock, Save, Loader2, Check, Globe, Settings } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import { api } from "@/lib/api";
 import { cn, getInitials, stringToColor } from "@/lib/utils";

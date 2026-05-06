@@ -56,33 +56,38 @@ export default function FilesPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 animate-fade-in pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h1 className="font-display font-bold text-2xl tracking-tight flex items-center gap-2"><FolderOpen className="w-6 h-6 text-accent" />Files</h1>
-          <p className="text-sm text-muted-foreground mt-1">{files.length} files in {currentWorkspace?.name}</p>
+          <h1 className="font-display font-black text-fluid-2xl tracking-tight flex items-center gap-2.5">
+            <FolderOpen className="w-7 h-7 text-accent" />
+            Files
+          </h1>
+          <p className="text-fluid-xs font-medium text-muted-foreground mt-1.5 opacity-70">{files.length} files in {currentWorkspace?.name}</p>
         </div>
-        <label className={cn("flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm cursor-pointer transition-all", uploading ? "bg-muted text-muted-foreground" : "accent-gradient text-white hover:opacity-90 shadow-lg")}>
-          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          {uploading ? "Uploading…" : "Upload File"}
+        <label className={cn("w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-bold text-sm cursor-pointer transition-all shadow-xl active:scale-95", uploading ? "bg-muted text-muted-foreground" : "accent-gradient text-white hover:shadow-accent/20")}>
+          {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+          {uploading ? "Uploading…" : "UPLOAD FILE"}
           <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
         </label>
       </div>
 
       {/* Filters Bar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search files…" className="w-full bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-accent/50" />
+      <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4">
+        <div className="relative w-full sm:flex-1 sm:max-w-md">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search files…" className="w-full bg-surface/50 border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:border-accent/50 transition-all shadow-sm" />
         </div>
-        <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-0.5">
-          {[{ label: "All", value: "" }, { label: "Images", value: "images" }, { label: "Docs", value: "docs" }].map((t) => (
-            <button key={t.value} onClick={() => setTypeFilter(t.value)} className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors", typeFilter === t.value ? "bg-accent text-white" : "text-muted-foreground hover:text-foreground")}>{t.label}</button>
-          ))}
-        </div>
-        <div className="flex items-center gap-0.5 bg-surface border border-border rounded-lg p-0.5">
-          <button onClick={() => setView("grid")} className={cn("p-1.5 rounded-md transition-colors", view === "grid" ? "bg-accent/10 text-accent" : "text-muted-foreground")}><Grid3X3 className="w-4 h-4" /></button>
-          <button onClick={() => setView("list")} className={cn("p-1.5 rounded-md transition-colors", view === "list" ? "bg-accent/10 text-accent" : "text-muted-foreground")}><List className="w-4 h-4" /></button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-1 sm:flex-none items-center gap-1 bg-surface/50 border border-border/60 rounded-xl p-1 shadow-sm">
+            {[{ label: "All", value: "" }, { label: "Images", value: "images" }, { label: "Docs", value: "docs" }].map((t) => (
+              <button key={t.value} onClick={() => setTypeFilter(t.value)} className={cn("flex-1 sm:flex-none px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all", typeFilter === t.value ? "bg-accent text-white shadow-md shadow-accent/20" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>{t.label}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 bg-surface/50 border border-border/60 rounded-xl p-1 shadow-sm">
+            <button onClick={() => setView("grid")} className={cn("p-1.5 rounded-lg transition-all", view === "grid" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:bg-muted")}><Grid3X3 className="w-4 h-4" /></button>
+            <button onClick={() => setView("list")} className={cn("p-1.5 rounded-lg transition-all", view === "list" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:bg-muted")}><List className="w-4 h-4" /></button>
+          </div>
         </div>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Moon, Sun, Wind, Flame, Check, Monitor, Type, LayoutTemplate } from "lucide-react";
+import { Moon, Sun, Wind, Flame, Check, Monitor, Type, LayoutTemplate, Palette } from "lucide-react";
 import { useTheme, type Theme } from "@/components/providers/ThemeProvider";
 import { cn } from "@/lib/utils";
 
