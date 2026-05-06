@@ -7,13 +7,14 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Hash, Lock, MessageCircle, LayoutDashboard, CheckSquare, FolderOpen,
   Bot, Search, BarChart3, Plus, ChevronDown, ChevronRight, Users, Zap,
-  Volume2, Inbox, MoreHorizontal, ArrowUpCircle, LayoutGrid
+  Volume2, Inbox, MoreHorizontal, ArrowUpCircle, LayoutGrid, Activity
 } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import { useCallStore } from "@/store/callStore";
 import { cn, getInitials, stringToColor } from "@/lib/utils";
 import { CreateChannelModal } from "@/components/modals/CreateChannelModal";
 import { WorkspaceSwitcherModal } from "@/components/modals/WorkspaceSwitcherModal";
+import { PulseModal } from "@/components/modals/PulseModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
@@ -115,6 +116,7 @@ export default function Sidebar() {
 
   const [isCreateChannelOpen, setCreateChannelOpen] = useState(false);
   const [isWorkspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false);
+  const [isPulseOpen, setPulseOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const isChatRoute = pathname === "/dashboard" || pathname === "/" || pathname.startsWith("/channels") || pathname.startsWith("/dm");
@@ -283,14 +285,18 @@ export default function Sidebar() {
 
           <div className="w-8 h-px bg-white/20 my-4" />
 
-          {/* Profile / Upgrade */}
+          {/* Pulse / Workspace Intelligence */}
           <div className="flex flex-col items-center gap-4 w-full">
-            <RailTooltip label="Upgrade Plan">
-              <button className="flex flex-col items-center group/upgrade btn-press">
-                <div className="w-[46px] h-[46px] rounded-2xl bg-gradient-to-tr from-[#8E2DE2] to-[#4A00E0] flex items-center justify-center shadow-lg group-hover/upgrade:scale-105 transition-all duration-300">
-                  <ArrowUpCircle className="w-6 h-6 text-white" />
+            <RailTooltip label="Synapse Pulse">
+              <button 
+                onClick={() => setPulseOpen(true)}
+                className="flex flex-col items-center group/pulse btn-press"
+              >
+                <div className="w-[46px] h-[46px] rounded-2xl bg-gradient-to-tr from-[#FF3D00] to-[#FF9100] flex items-center justify-center shadow-lg group-hover/pulse:scale-110 group-hover/pulse:rotate-12 transition-all duration-300 relative overflow-hidden ring-2 ring-orange-500/20">
+                  <Activity className="w-6 h-6 text-white relative z-10 animate-pulse" />
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/pulse:opacity-100 transition-opacity" />
                 </div>
-                <span className="text-[10px] font-bold text-white/90 mt-1">Upgrade</span>
+                <span className="text-[10px] font-black text-white mt-1.5 tracking-tighter uppercase">Pulse</span>
               </button>
             </RailTooltip>
 
@@ -424,6 +430,7 @@ export default function Sidebar() {
 
       <CreateChannelModal isOpen={isCreateChannelOpen} onClose={() => setCreateChannelOpen(false)} />
       <WorkspaceSwitcherModal isOpen={isWorkspaceSwitcherOpen} onClose={() => setWorkspaceSwitcherOpen(false)} />
+      <PulseModal isOpen={isPulseOpen} onClose={() => setPulseOpen(false)} />
     </>
   );
 }
