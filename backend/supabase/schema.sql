@@ -247,7 +247,7 @@ CREATE INDEX IF NOT EXISTS idx_dm_unread  ON public.direct_messages(to_user_id, 
 
 -- ================================================================
 -- TABLE 9: tasks
--- Kanban tasks: backlog → in_progress → in_review → done
+-- Advanced Kanban tasks: backlog → in_progress → in_review → done
 -- ================================================================
 CREATE TABLE IF NOT EXISTS public.tasks (
   id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -255,15 +255,15 @@ CREATE TABLE IF NOT EXISTS public.tasks (
   title         TEXT        NOT NULL,
   description   TEXT        DEFAULT '',
   status        TEXT        DEFAULT 'backlog'
-                            CHECK (status IN ('backlog','in_progress','in_review','done')),
+                             CHECK (status IN ('backlog','in_progress','in_review','done','overdue')),
   priority      TEXT        DEFAULT 'medium'
-                            CHECK (priority IN ('urgent','high','medium','low')),
-  assignee_id   UUID        REFERENCES public.profiles(id) ON DELETE SET NULL,
+                             CHECK (priority IN ('urgent','high','medium','low')),
   created_by    UUID        REFERENCES public.profiles(id) ON DELETE SET NULL,
   due_date      DATE,
   channel_id    UUID        REFERENCES public.channels(id) ON DELETE SET NULL,
   position      INTEGER     DEFAULT 0,
   tags          TEXT[]      DEFAULT '{}',
+  metadata      JSONB       DEFAULT '{}',
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
@@ -273,8 +273,22 @@ CREATE TRIGGER trg_tasks_updated_at
   FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
 
 CREATE INDEX IF NOT EXISTS idx_tasks_workspace ON public.tasks(workspace_id, status);
-CREATE INDEX IF NOT EXISTS idx_tasks_assignee  ON public.tasks(assignee_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_due       ON public.tasks(due_date) WHERE due_date IS NOT NULL;
+
+
+-- ================================================================
+-- TABLE 9.1: task_assignments
+-- Support for multiple assignees per task
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.task_assignments (
+  task_id   UUID NOT NULL REFERENCES public.tasks(id)    ON DELETE CASCADE,
+  user_id   UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  assigned_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (task_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ta_task ON public.task_assignments(task_id);
+CREATE INDEX IF NOT EXISTS idx_ta_user ON public.task_assignments(user_id);
 
 
 -- ================================================================
@@ -376,6 +390,25 @@ CREATE TABLE IF NOT EXISTS public.focus_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_focus_user ON public.focus_sessions(user_id, started_at DESC);
+
+
+-- ================================================================
+-- TABLE 15: workspace_activity
+-- Audit log & activity feed for the dashboard
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.workspace_activity (
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  workspace_id  UUID        NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  user_id       UUID        NOT NULL REFERENCES public.profiles(id)   ON DELETE CASCADE,
+  action        TEXT        NOT NULL, -- e.g., 'task_created', 'member_joined', 'channel_deleted'
+  entity_type   TEXT,        -- e.g., 'task', 'channel', 'member'
+  entity_id     UUID,
+  entity_name   TEXT,
+  metadata      JSONB       DEFAULT '{}',
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_workspace ON public.workspace_activity(workspace_id, created_at DESC);
 
 
 -- ================================================================
@@ -551,6 +584,26 @@ CREATE POLICY "focus_sessions: user manages own"
   ON public.focus_sessions FOR ALL TO authenticated
   USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
+-- task_assignments
+ALTER TABLE public.task_assignments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "task_assignments: workspace members can view"
+  ON public.task_assignments FOR SELECT TO authenticated
+  USING (task_id IN (SELECT id FROM public.tasks WHERE workspace_id IN (
+    SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+  )));
+CREATE POLICY "task_assignments: owner/admin can insert/delete"
+  ON public.task_assignments FOR ALL TO authenticated
+  USING (task_id IN (SELECT id FROM public.tasks WHERE workspace_id IN (
+    SELECT workspace_id FROM public.workspace_members
+    WHERE user_id = auth.uid() AND role IN ('owner','admin')
+  )));
+
+-- workspace_activity
+ALTER TABLE public.workspace_activity ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "workspace_activity: members can view"
+  ON public.workspace_activity FOR SELECT TO authenticated
+  USING (workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()));
+
 
 -- ================================================================
 -- REALTIME — enable live updates on key tables
@@ -561,6 +614,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.message_reactions;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.tasks;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.workspace_activity;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.task_assignments;
 
 
 -- ================================================================

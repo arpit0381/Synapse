@@ -22,6 +22,7 @@ export interface User {
     font_size: string;
     density: string;
   };
+  role?: "owner" | "admin" | "member" | "guest"; // Role in global context or current context
 }
 
 export interface Workspace {
@@ -30,6 +31,8 @@ export interface Workspace {
   logo_url?: string;
   owner_id: string;
   invite_code: string;
+  created_at?: string;
+  settings?: any;
 }
 
 export interface Channel {
@@ -53,6 +56,24 @@ export interface AppFile {
   title: string;
   content: string;
   createdAt: string;
+}
+
+export interface Task {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string;
+  status: "backlog" | "in_progress" | "in_review" | "done" | "overdue";
+  priority: "urgent" | "high" | "medium" | "low";
+  created_by: string;
+  due_date?: string;
+  channel_id?: string;
+  position: number;
+  tags: string[];
+  assignees: any[];
+  metadata?: any;
+  created_at: string;
+  subtasks?: any[];
 }
 
 interface AppState {
@@ -228,6 +249,7 @@ export const useAppStore = create<AppState>()(
         isAuthenticated: state.isAuthenticated,
         currentWorkspace: state.currentWorkspace,
         workspaces: state.workspaces,
+        currentUserRole: state.currentUserRole,
         enterKeyBehavior: state.enterKeyBehavior,
         files: state.files,
       }),

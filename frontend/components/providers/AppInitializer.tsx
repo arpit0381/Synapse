@@ -87,7 +87,7 @@ export function AppInitializer() {
 
         // Determine user role
         const { members } = await api.workspaces.getMembers(currentWorkspace!.id);
-        const self = members.find((m: any) => m.user_id === user!.id);
+        const self = members.find((m: any) => m.id === user!.id);
         setCurrentUserRole(self?.role || "member");
       } catch (err) {
         console.error("[Init] Failed to load workspace data:", err);

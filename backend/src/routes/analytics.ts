@@ -133,55 +133,79 @@ router.get("/tasks", async (req: Request, res: Response) => {
   }
 });
 
-// ── GET /api/analytics/contributors?workspace_id= ────────────────────
-router.get("/contributors", async (req: Request, res: Response) => {
+// ── GET /api/analytics/activity?workspace_id=&limit=20 ──────────────
+router.get("/activity", async (req: Request, res: Response) => {
+  const { workspace_id, limit = "20" } = req.query as Record<string, string>;
+  if (!workspace_id) { res.status(400).json({ error: "workspace_id required" }); return; }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("workspace_activity")
+      .select(`
+        *,
+        user:user_id ( id, full_name, avatar_url, username )
+      `)
+      .eq("workspace_id", workspace_id)
+      .order("created_at", { ascending: false })
+      .limit(Number(limit));
+
+    if (error) { res.status(500).json({ error: error.message }); return; }
+    res.json({ activity: data || [] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/analytics/overview?workspace_id= ────────────────────────
+router.get("/overview", async (req: Request, res: Response) => {
   const { workspace_id } = req.query as Record<string, string>;
   if (!workspace_id) { res.status(400).json({ error: "workspace_id required" }); return; }
 
   try {
+    // 1. Total Messages Today
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
     const { data: channels } = await supabaseAdmin
       .from("channels")
       .select("id")
       .eq("workspace_id", workspace_id);
-
-    if (!channels || channels.length === 0) {
-      res.json({ data: [] });
-      return;
-    }
-
-    const channelIds = channels.map((c: any) => c.id);
-
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const { data, error } = await supabaseAdmin
+    
+    const channelIds = channels?.map(c => c.id) || [];
+    
+    const { count: msgToday } = await supabaseAdmin
       .from("messages")
-      .select("user_id, profiles:user_id ( full_name, avatar_url )")
+      .select("*", { count: "exact", head: true })
       .in("channel_id", channelIds)
-      .gte("created_at", thirtyDaysAgo.toISOString());
+      .gte("created_at", today.toISOString());
 
-    if (error) { res.status(500).json({ error: error.message }); return; }
+    // 2. Active Tasks
+    const { count: activeTasks } = await supabaseAdmin
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .eq("workspace_id", workspace_id)
+      .neq("status", "done");
 
-    // Count messages per user
-    const counts: Record<string, { name: string; avatar_url: string; count: number }> = {};
-    (data || []).forEach((m: any) => {
-      const profile = m.profiles;
-      if (!counts[m.user_id]) {
-        counts[m.user_id] = {
-          name: profile?.full_name || "Unknown",
-          avatar_url: profile?.avatar_url || "",
-          count: 0,
-        };
-      }
-      counts[m.user_id].count++;
+    // 3. Member Count
+    const { count: membersCount } = await supabaseAdmin
+      .from("workspace_members")
+      .select("*", { count: "exact", head: true })
+      .eq("workspace_id", workspace_id);
+
+    // 4. Tasks Overdue
+    const { count: overdueTasks } = await supabaseAdmin
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .eq("workspace_id", workspace_id)
+      .lt("due_date", new Date().toISOString().split("T")[0])
+      .neq("status", "done");
+
+    res.json({
+      messages_today: msgToday || 0,
+      active_tasks: activeTasks || 0,
+      total_members: membersCount || 0,
+      overdue_tasks: overdueTasks || 0
     });
-
-    const sorted = Object.entries(counts)
-      .sort(([, a], [, b]) => b.count - a.count)
-      .slice(0, 5)
-      .map(([userId, info]) => ({ userId, ...info }));
-
-    res.json({ data: sorted });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

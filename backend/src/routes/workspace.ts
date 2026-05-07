@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { supabaseAdmin } from "../lib/supabase";
+import { requireRole, logActivity } from "../lib/permissions";
 
 const router = Router();
 
@@ -53,12 +54,30 @@ router.post("/", async (req: Request, res: Response) => {
     role: "owner",
   });
 
-  // Create default #general channel
-  await supabaseAdmin.from("channels").insert({
+  // Create default channels
+  const defaultChannels = [
+    { name: "general", description: "Company-wide announcements and general chat" },
+    { name: "announcements", description: "Important news and updates" },
+    { name: "tasks", description: "Team task discussion" }
+  ];
+
+  for (const ch of defaultChannels) {
+    await supabaseAdmin.from("channels").insert({
+      workspace_id: ws.id,
+      name: ch.name,
+      description: ch.description,
+      created_by: parse.data.owner_id,
+    });
+  }
+
+  // Log activity
+  await logActivity({
     workspace_id: ws.id,
-    name: "general",
-    description: "Company-wide announcements and general chat",
-    created_by: parse.data.owner_id,
+    user_id: parse.data.owner_id,
+    action: "workspace_created",
+    entity_type: "workspace",
+    entity_id: ws.id,
+    entity_name: ws.name
   });
 
   res.status(201).json({ workspace: ws });
@@ -89,6 +108,15 @@ router.post("/join", async (req: Request, res: Response) => {
   if (joinErr && !joinErr.message.includes("unique")) {
     res.status(400).json({ error: joinErr.message }); return;
   }
+
+  // Log activity
+  await logActivity({
+    workspace_id: ws.id,
+    user_id,
+    action: "member_joined",
+    entity_type: "member",
+    entity_id: user_id
+  });
 
   res.json({ workspace: ws, message: "Joined successfully" });
 });
@@ -130,15 +158,15 @@ router.get("/:id/members", async (req: Request, res: Response) => {
   res.json({ members });
 });
 
-// ── PATCH /api/workspaces/:id ──────────────────────────────────
-router.patch("/:id", async (req: Request, res: Response) => {
+// ── PATCH /api/workspaces/:workspace_id ──────────────────────────
+router.patch("/:workspace_id", requireRole(["owner", "admin"]), async (req: Request, res: Response) => {
   const { name } = req.body;
   if (!name) { res.status(400).json({ error: "Name is required" }); return; }
 
   const { data: ws, error } = await supabaseAdmin
     .from("workspaces")
     .update({ name })
-    .eq("id", req.params.id)
+    .eq("id", req.params.workspace_id)
     .select()
     .single();
 
@@ -146,24 +174,64 @@ router.patch("/:id", async (req: Request, res: Response) => {
   res.json({ workspace: ws });
 });
 
-// ── DELETE /api/workspaces/:id ─────────────────────────────────
-router.delete("/:id", async (req: Request, res: Response) => {
+// ── PATCH /api/workspaces/:workspace_id/members/:userId ───────────
+router.patch("/:workspace_id/members/:userId", requireRole(["owner", "admin"]), async (req: Request, res: Response) => {
+  const { role } = req.body;
+  const userId = req.headers["x-user-id"] as string;
+
+  if (!["admin", "member", "guest"].includes(role)) {
+    return res.status(400).json({ error: "Invalid role" });
+  }
+
+  // Only owners can promote/demote admins
+  if (role === "admin") {
+    const { data: caller } = await supabaseAdmin
+      .from("workspace_members")
+      .select("role")
+      .eq("workspace_id", req.params.workspace_id)
+      .eq("user_id", userId)
+      .single();
+    
+    if (caller?.role !== "owner") {
+      return res.status(403).json({ error: "Only workspace owners can assign Admin roles" });
+    }
+  }
+
+  const { error } = await supabaseAdmin
+    .from("workspace_members")
+    .update({ role })
+    .eq("workspace_id", req.params.workspace_id)
+    .eq("user_id", req.params.userId);
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ success: true });
+});
+
+router.delete("/:workspace_id", requireRole(["owner"]), async (req: Request, res: Response) => {
   const { error } = await supabaseAdmin
     .from("workspaces")
     .delete()
-    .eq("id", req.params.id);
+    .eq("id", req.params.workspace_id);
 
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.status(204).send();
 });
 
-// ── DELETE /api/workspaces/:id/members/:userId ──────────────────
-router.delete("/:id/members/:userId", async (req: Request, res: Response) => {
+// ── DELETE /api/workspaces/:workspace_id/members/:targetUserId ───
+router.delete("/:workspace_id/members/:targetUserId", requireRole(["owner", "admin"]), async (req: Request, res: Response) => {
+  const { workspace_id, targetUserId } = req.params as any;
+  const userId = req.headers["x-user-id"] as string;
+
+  // Prevent removing self (users should use a different "Leave" endpoint or owners can't leave)
+  if (userId === targetUserId) {
+    return res.status(400).json({ error: "Use leave workspace to remove yourself" });
+  }
+
   const { error } = await supabaseAdmin
     .from("workspace_members")
     .delete()
-    .eq("workspace_id", req.params.id)
-    .eq("user_id", req.params.userId);
+    .eq("workspace_id", workspace_id)
+    .eq("user_id", targetUserId);
 
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.status(204).send();

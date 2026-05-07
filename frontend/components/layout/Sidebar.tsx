@@ -27,13 +27,13 @@ const STATUS_COLORS = {
 };
 
 const RAIL_ITEMS = [
-  { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
-  { icon: CheckSquare, label: "Planner", href: "/tasks" },
-  { icon: Bot, label: "AI", href: "/ai-assistant" },
-  { icon: Users, label: "Teams", href: "/teams" },
-  { icon: LayoutGrid, label: "Apps Hub", href: "/apps" },
-  { icon: FolderOpen, label: "Files", href: "/files" },
-  { icon: BarChart3, label: "Dashboard", href: "/analytics" },
+  { icon: LayoutDashboard, label: "Home", href: "/dashboard", roles: ["owner", "admin", "member", "guest"] },
+  { icon: CheckSquare, label: "Planner", href: "/tasks", roles: ["owner", "admin", "member"] },
+  { icon: Bot, label: "AI", href: "/ai-assistant", roles: ["owner", "admin", "member"] },
+  { icon: Users, label: "Teams", href: "/teams", roles: ["owner", "admin", "member"] },
+  { icon: LayoutGrid, label: "Apps Hub", href: "/apps", roles: ["owner", "admin", "member"] },
+  { icon: FolderOpen, label: "Files", href: "/files", roles: ["owner", "admin", "member"] },
+  { icon: BarChart3, label: "Analytics", href: "/analytics", roles: ["owner", "admin"] },
 ];
 
 const CONTEXT_MENU = [
@@ -111,7 +111,7 @@ export default function Sidebar() {
   const callStore = useCallStore();
   const {
     user, currentWorkspace, channels, sidebarOpen, workspaces,
-    setSidebarOpen, presenceMap, onlineUserIds
+    setSidebarOpen, presenceMap, onlineUserIds, currentUserRole
   } = store;
 
   const [isCreateChannelOpen, setCreateChannelOpen] = useState(false);
@@ -257,31 +257,33 @@ export default function Sidebar() {
 
           {/* Rail Nav Items */}
           <div className="flex-1 w-full flex flex-col items-center gap-2 overflow-y-auto hide-scrollbar">
-            {RAIL_ITEMS.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-              return (
-                <RailTooltip key={item.href} label={item.label}>
-                  <Link href={item.href} onClick={() => setSidebarOpen(false)} className="w-full flex flex-col items-center group/rail">
-                    <div className="relative flex flex-col items-center py-2 w-full">
-                      {/* Active indicator line */}
-                      {isActive && (
-                        <motion.div layoutId="rail-indicator" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full" />
-                      )}
+            {RAIL_ITEMS
+              .filter(item => !item.roles || item.roles.includes(currentUserRole || "member"))
+              .map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <RailTooltip key={item.href} label={item.label}>
+                    <Link href={item.href} onClick={() => setSidebarOpen(false)} className="w-full flex flex-col items-center group/rail">
+                      <div className="relative flex flex-col items-center py-2 w-full">
+                        {/* Active indicator line */}
+                        {isActive && (
+                          <motion.div layoutId="rail-indicator" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full" />
+                        )}
 
-                      <div className={cn(
-                        "w-[46px] h-[46px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 group-hover/rail:bg-white/10",
-                        isActive ? "bg-white/20 text-white" : "text-white/70"
-                      )}>
-                        <item.icon className={cn("w-6 h-6 transition-transform duration-200", !isActive && "group-hover/rail:scale-110")} />
+                        <div className={cn(
+                          "w-[46px] h-[46px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 group-hover/rail:bg-white/10",
+                          isActive ? "bg-white/20 text-white" : "text-white/70"
+                        )}>
+                          <item.icon className={cn("w-6 h-6 transition-transform duration-200", !isActive && "group-hover/rail:scale-110")} />
+                        </div>
+                        <span className={cn("text-[10px] font-medium mt-1 tracking-wide", isActive ? "text-white" : "text-white/70")}>
+                          {item.label}
+                        </span>
                       </div>
-                      <span className={cn("text-[10px] font-medium mt-1 tracking-wide", isActive ? "text-white" : "text-white/70")}>
-                        {item.label}
-                      </span>
-                    </div>
-                  </Link>
-                </RailTooltip>
-              );
-            })}
+                    </Link>
+                  </RailTooltip>
+                );
+              })}
           </div>
 
           <div className="w-8 h-px bg-white/20 my-4" />
@@ -321,7 +323,9 @@ export default function Sidebar() {
               </h1>
               <div className="flex gap-1.5">
                 <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><Search className="w-4 h-4" /></button>
-                <button onClick={() => setCreateChannelOpen(true)} className="p-1.5 rounded-lg bg-[#4B39EF] text-white shadow-sm hover:opacity-90 hover:scale-105 transition-all"><Plus className="w-4 h-4" /></button>
+                {(currentUserRole === "owner" || currentUserRole === "admin") && (
+                  <button onClick={() => setCreateChannelOpen(true)} className="p-1.5 rounded-lg bg-[#4B39EF] text-white shadow-sm hover:opacity-90 hover:scale-105 transition-all"><Plus className="w-4 h-4" /></button>
+                )}
               </div>
             </div>
 
@@ -371,13 +375,15 @@ export default function Sidebar() {
                   );
                 })}
                 {/* Master Create Button */}
-                <button 
-                  onClick={() => setCreateChannelOpen(true)}
-                  className="w-[calc(100%-24px)] mx-3 mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-bold text-accent bg-accent/5 hover:bg-accent/10 border border-accent/20 border-dashed transition-all active:scale-95 group"
-                >
-                  <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
-                  Create a channel
-                </button>
+                {(currentUserRole === "owner" || currentUserRole === "admin") && (
+                  <button 
+                    onClick={() => setCreateChannelOpen(true)}
+                    className="w-[calc(100%-24px)] mx-3 mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-bold text-accent bg-accent/5 hover:bg-accent/10 border border-accent/20 border-dashed transition-all active:scale-95 group"
+                  >
+                    <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+                    Create a channel
+                  </button>
+                )}
               </SidebarSection>
 
               {/* Private Channels */}
@@ -421,13 +427,15 @@ export default function Sidebar() {
                   );
                 })}
                 {/* Invite Button */}
-                <button 
-                  onClick={() => setInviteModalOpen(true)}
-                  className="w-[calc(100%-24px)] mx-3 mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-bold text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/20 border-dashed transition-all active:scale-95 group"
-                >
-                  <Users className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  Invite people
-                </button>
+                {(currentUserRole === "owner" || currentUserRole === "admin") && (
+                  <button 
+                    onClick={() => setInviteModalOpen(true)}
+                    className="w-[calc(100%-24px)] mx-3 mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-bold text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/20 border-dashed transition-all active:scale-95 group"
+                  >
+                    <Users className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    Invite people
+                  </button>
+                )}
               </SidebarSection>
 
             </div>

@@ -13,9 +13,18 @@ async function fetcher<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
+  let userId = null;
+  if (typeof window !== "undefined") {
+    try {
+      const storeData = JSON.parse(localStorage.getItem("synapse-store") || "{}");
+      if (storeData?.state?.user?.id) userId = storeData.state.user.id;
+    } catch(e) {}
+  }
+
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(userId ? { "x-user-id": userId } : {}),
     ...options.headers,
   };
 
@@ -84,8 +93,8 @@ export const api = {
 
   // ── Tasks ─────────────────────────────────────────────────────────
   tasks: {
-    list: (workspace_id: string, status?: string) =>
-      fetcher<{ tasks: any[] }>(`/api/tasks?workspace_id=${workspace_id}${status ? `&status=${status}` : ""}`),
+    list: (workspace_id: string, status?: string, assignee_id?: string) =>
+      fetcher<{ tasks: any[] }>(`/api/tasks?workspace_id=${workspace_id}${status ? `&status=${status}` : ""}${assignee_id ? `&assignee_id=${assignee_id}` : ""}`),
     get: (id: string) => fetcher<any>(`/api/tasks/${id}`),
     create: (data: any) => fetcher<any>("/api/tasks", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) => fetcher<{ task: any }>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
@@ -190,6 +199,10 @@ export const api = {
       fetcher<{ total: number; breakdown: Record<string, number>; completion_rate: number }>(`/api/analytics/tasks?workspace_id=${workspace_id}`),
     contributors: (workspace_id: string) =>
       fetcher<{ data: { userId: string; name: string; avatar_url: string; count: number }[] }>(`/api/analytics/contributors?workspace_id=${workspace_id}`),
+    getOverview: (workspace_id: string) =>
+      fetcher<any>(`/api/analytics/overview?workspace_id=${workspace_id}`),
+    getActivity: (workspace_id: string, limit = 20) =>
+      fetcher<{ activity: any[] }>(`/api/analytics/activity?workspace_id=${workspace_id}&limit=${limit}`),
   },
 
   // ── Profiles ──────────────────────────────────────────────────────
