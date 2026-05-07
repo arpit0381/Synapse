@@ -13,6 +13,15 @@ export interface User {
   status_text?: string;
   status_emoji?: string;
   timezone?: string;
+  notification_settings?: {
+    sounds: boolean;
+    quiet_hours: string;
+    categories: Record<string, { push: boolean; email: boolean; in_app: boolean }>;
+  };
+  appearance_settings?: {
+    font_size: string;
+    density: string;
+  };
 }
 
 export interface Workspace {

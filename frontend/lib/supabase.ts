@@ -57,6 +57,11 @@ export async function getCurrentUser() {
   return data.user;
 }
 
+/** Update user password */
+export async function updatePassword(newPassword: string) {
+  return supabase.auth.updateUser({ password: newPassword });
+}
+
 /** Listen to auth state changes */
 export function onAuthStateChange(callback: Parameters<typeof supabase.auth.onAuthStateChange>[0]) {
   return supabase.auth.onAuthStateChange(callback);

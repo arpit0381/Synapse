@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Moon, Sun, Wind, Flame, Check, Monitor, Type, LayoutTemplate, Palette } from "lucide-react";
+import { Moon, Sun, Wind, Flame, Check, Monitor, Type, LayoutTemplate, Palette, Loader2 } from "lucide-react";
 import { useTheme, type Theme } from "@/components/providers/ThemeProvider";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/appStore";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 const THEME_CONFIG = [
   { id: "obsidian" as Theme, name: "Obsidian", desc: "Deep dark with violet accents", icon: <Moon className="w-5 h-5" />, preview: { bg: "#0A0A0F", surface: "#111118", accent: "#6C63FF" } },
@@ -18,9 +21,41 @@ const DENSITY_OPTIONS = ["Comfortable", "Compact", "Cozy"];
 
 export default function AppearanceSettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { user, updateUser } = useAppStore();
   const [fontSize, setFontSize] = useState("Default");
   const [density, setDensity] = useState("Comfortable");
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Initialize from user data
+  useEffect(() => {
+    if (user?.appearance_settings) {
+      setFontSize(user.appearance_settings.font_size || "Default");
+      setDensity(user.appearance_settings.density || "Comfortable");
+    }
+  }, [user]);
+
+  async function handleApply() {
+    if (!user) return;
+    setSaving(true);
+
+    const appearance_settings = {
+      font_size: fontSize,
+      density: density,
+    };
+
+    try {
+      const { profile } = await api.profiles.update(user.id, { appearance_settings });
+      updateUser({ appearance_settings: profile.appearance_settings });
+      setSaved(true);
+      toast.success("Appearance preferences updated");
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update preferences");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
@@ -118,10 +153,13 @@ export default function AppearanceSettingsPage() {
 
             <div className="pt-4 border-t border-border/30">
               <button 
-                onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }}
+                disabled={saving}
+                onClick={handleApply}
                 className={cn("w-full flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl text-[13px] font-bold uppercase tracking-widest transition-all btn-press",
-                  saved ? "bg-green-500 text-white shadow-lg shadow-green-500/20" : "accent-gradient text-white shadow-xl shadow-accent/20")}
+                  saved ? "bg-green-500 text-white shadow-lg shadow-green-500/20" : "accent-gradient text-white shadow-xl shadow-accent/20",
+                  saving && "opacity-80 cursor-wait")}
               >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {saved ? <><Check className="w-4 h-4" /> Preferences Saved</> : "Apply Changes"}
               </button>
             </div>

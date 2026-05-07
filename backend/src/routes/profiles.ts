@@ -6,7 +6,7 @@ const router = Router();
 
 // ── PATCH /api/profiles/:id ──────────────────────────────────────────
 router.patch("/:id", async (req: Request, res: Response) => {
-  const allowed = ["full_name", "username", "avatar_url", "bio", "status", "status_message", "status_text", "status_emoji", "timezone"];
+  const allowed = ["full_name", "username", "avatar_url", "bio", "status", "status_message", "status_text", "status_emoji", "timezone", "notification_settings", "appearance_settings"];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) updates[key] = req.body[key];

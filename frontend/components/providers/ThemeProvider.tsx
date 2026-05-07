@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useAppStore } from "@/store/appStore";
 
 export type Theme = "obsidian" | "aurora" | "ember" | "arctic";
 
@@ -40,6 +41,7 @@ export const THEMES = [
 ];
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAppStore();
   const [theme, setThemeState] = useState<Theme>("obsidian");
 
   useEffect(() => {
@@ -49,6 +51,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setThemeState(stored);
     }
   }, []);
+
+  // Handle Appearance Settings from DB
+  useEffect(() => {
+    if (user?.appearance_settings) {
+      const root = document.documentElement;
+      root.setAttribute("data-font-size", user.appearance_settings.font_size.toLowerCase());
+      root.setAttribute("data-density", user.appearance_settings.density.toLowerCase());
+    }
+  }, [user?.appearance_settings]);
 
   function applyTheme(newTheme: Theme) {
     const root = document.documentElement;

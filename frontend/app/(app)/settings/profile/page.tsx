@@ -2,17 +2,30 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Camera, Mail, Lock, Save, Loader2, Check, Globe, Settings } from "lucide-react";
+import { User, Camera, Mail, Lock, Save, Loader2, Check, Globe, Settings, Clock, Smile } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import { api } from "@/lib/api";
 import { cn, getInitials, stringToColor } from "@/lib/utils";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
+
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Asia/Tokyo",
+  "Asia/Kolkata",
+  "Asia/Shanghai",
+  "Australia/Sydney"
+];
 
 export default function ProfilePage() {
   const { user, updateUser, enterKeyBehavior, setEnterKeyBehavior } = useAppStore();
   const [name, setName] = useState(user?.name || "");
   const [bio, setBio] = useState(user?.bio || "");
   const [statusMessage, setStatusMessage] = useState(user?.status_message || "");
+  const [timezone, setTimezone] = useState(user?.timezone || "UTC");
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
@@ -21,6 +34,7 @@ export default function ProfilePage() {
       setName(user.name || "");
       setBio(user.bio || "");
       setStatusMessage(user.status_message || "");
+      setTimezone(user.timezone || "UTC");
     }
   }, [user]);
 
@@ -28,10 +42,17 @@ export default function ProfilePage() {
     if (!user) return;
     setSaving(true);
     try {
-      await api.profiles.update(user.id, { full_name: name, bio, status_message: statusMessage });
-      updateUser({ name, bio, status_message: statusMessage });
-      toast.success("Profile updated!");
-    } catch (err: any) { toast.error(err.message); }
+      await api.profiles.update(user.id, { 
+        full_name: name, 
+        bio, 
+        status_message: statusMessage,
+        timezone 
+      });
+      updateUser({ name, bio, status_message: statusMessage, timezone });
+      toast.success("Profile updated successfully");
+    } catch (err: any) { 
+      toast.error(err.message || "Failed to update profile"); 
+    }
     finally { setSaving(false); }
   }
 
@@ -39,7 +60,6 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     
-    // Check file extension instead of just type because Windows sometimes gives empty type
     const isImage = file.type.startsWith("image/") || file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
     if (!isImage) { 
       toast.error("Please select a valid image file"); 
@@ -47,7 +67,6 @@ export default function ProfilePage() {
       return; 
     }
 
-    // Cloudinary free tier has a 10MB limit
     if (file.size > 10 * 1024 * 1024) {
       toast.error("Image is too large. Please select an image under 10MB.");
       e.target.value = "";
@@ -84,7 +103,7 @@ export default function ProfilePage() {
     }
     finally { 
       setAvatarUploading(false); 
-      e.target.value = ""; // Reset input so user can pick the same file again if it failed
+      e.target.value = "";
     }
   }
 
@@ -99,7 +118,7 @@ export default function ProfilePage() {
           </div>
           Profile Settings
         </h1>
-        <p className="text-sm font-medium text-muted-foreground mt-2 md:mt-3 px-1">Manage your personal information and preferences</p>
+        <p className="text-sm font-medium text-muted-foreground mt-2 md:mt-3 px-1">Manage your personal information and presence</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
@@ -149,14 +168,37 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block opacity-70">Timezone</label>
+                <div className="relative">
+                  <Clock className="absolute left-4 top-3.5 w-4 h-4 text-muted-foreground opacity-50" />
+                  <select 
+                    value={timezone} 
+                    onChange={e => setTimezone(e.target.value)}
+                    className="w-full bg-background/50 border border-border/40 rounded-xl pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all appearance-none cursor-pointer"
+                  >
+                    {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace("_", " ")}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block opacity-70">Status</label>
+                <div className="relative">
+                  <Smile className="absolute left-4 top-3.5 w-4 h-4 text-muted-foreground opacity-50" />
+                  <input 
+                    value={statusMessage} 
+                    onChange={e => setStatusMessage(e.target.value)} 
+                    placeholder="Set a status..."
+                    className="w-full bg-background/50 border border-border/40 rounded-xl pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all" 
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block opacity-70">Bio</label>
               <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Tell your team about yourself…" className="w-full bg-background/50 border border-border/40 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all resize-none" />
-            </div>
-            
-            <div>
-              <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block opacity-70">Status Message</label>
-              <input value={statusMessage} onChange={e => setStatusMessage(e.target.value)} placeholder="e.g. In a meeting…" className="w-full bg-background/50 border border-border/40 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all" />
             </div>
           </motion.div>
 

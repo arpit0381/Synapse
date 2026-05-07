@@ -1,39 +1,102 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, MessageSquare, CheckSquare, AtSign, Hash, Mail, Smartphone, Volume2, Check } from "lucide-react";
+import { Bell, MessageSquare, CheckSquare, AtSign, Hash, Mail, Smartphone, Volume2, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/appStore";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 interface NotifSetting { id: string; label: string; description: string; icon: React.ReactNode; push: boolean; email: boolean; inApp: boolean; }
 
-const NOTIF_SETTINGS: NotifSetting[] = [
-  { id: "mentions", label: "Direct Mentions", description: "When someone @mentions you in a channel", icon: <AtSign className="w-4 h-4 text-accent" />, push: true, email: true, inApp: true },
-  { id: "dms", label: "Direct Messages", description: "When you receive a new direct message", icon: <MessageSquare className="w-4 h-4 text-blue-400" />, push: true, email: false, inApp: true },
-  { id: "tasks", label: "Task Assignments", description: "When a task is assigned or updated", icon: <CheckSquare className="w-4 h-4 text-yellow-400" />, push: true, email: true, inApp: true },
-  { id: "channels", label: "Channel Activity", description: "New messages in channels you follow", icon: <Hash className="w-4 h-4 text-green-400" />, push: false, email: false, inApp: true },
-  { id: "email_digest", label: "Weekly Digest", description: "Weekly summary of team activity", icon: <Mail className="w-4 h-4 text-purple-400" />, push: false, email: true, inApp: false },
+const SETTINGS_METADATA = [
+  { id: "mentions", label: "Direct Mentions", description: "When someone @mentions you in a channel", icon: <AtSign className="w-4 h-4 text-accent" /> },
+  { id: "dms", label: "Direct Messages", description: "When you receive a new direct message", icon: <MessageSquare className="w-4 h-4 text-blue-400" /> },
+  { id: "tasks", label: "Task Assignments", description: "When a task is assigned or updated", icon: <CheckSquare className="w-4 h-4 text-yellow-400" /> },
+  { id: "channels", label: "Channel Activity", description: "New messages in channels you follow", icon: <Hash className="w-4 h-4 text-green-400" /> },
+  { id: "email_digest", label: "Weekly Digest", description: "Weekly summary of team activity", icon: <Mail className="w-4 h-4 text-purple-400" /> },
 ];
 
 const QUIET_HOURS = ["Never", "10 PM – 8 AM", "9 PM – 9 AM", "8 PM – 9 AM", "Weekends"];
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
-    <button onClick={() => onChange(!checked)}
-      className={cn("relative w-9 h-5 rounded-full transition-colors flex-shrink-0", checked ? "bg-accent" : "bg-muted border border-border")}>
+    <button 
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn("relative w-9 h-5 rounded-full transition-colors flex-shrink-0", 
+        checked ? "bg-accent" : "bg-muted border border-border",
+        disabled && "opacity-50 cursor-not-allowed")}
+    >
       <span className={cn("absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform", checked ? "translate-x-4" : "translate-x-0.5")} />
     </button>
   );
 }
 
 export default function NotificationsSettingsPage() {
-  const [settings, setSettings] = useState<NotifSetting[]>(NOTIF_SETTINGS);
-  const [quietHours, setQuietHours] = useState("10 PM – 8 AM");
+  const { user, updateUser } = useAppStore();
+  const [settings, setSettings] = useState<NotifSetting[]>([]);
+  const [quietHours, setQuietHours] = useState("Never");
   const [sound, setSound] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Initialize from user data
+  useEffect(() => {
+    if (user?.notification_settings) {
+      const ns = user.notification_settings;
+      setSound(ns.sounds);
+      setQuietHours(ns.quiet_hours);
+      
+      const mapped = SETTINGS_METADATA.map(m => ({
+        ...m,
+        push: ns.categories[m.id]?.push ?? true,
+        email: ns.categories[m.id]?.email ?? false,
+        inApp: ns.categories[m.id]?.in_app ?? true,
+      }));
+      setSettings(mapped);
+    } else {
+      // Defaults if not set
+      setSettings(SETTINGS_METADATA.map(m => ({
+        ...m,
+        push: true,
+        email: false,
+        inApp: true,
+      })));
+    }
+  }, [user]);
 
   function toggle(id: string, key: "push" | "email" | "inApp") {
     setSettings(prev => prev.map(s => s.id === id ? { ...s, [key]: !s[key] } : s));
+  }
+
+  async function handleApply() {
+    if (!user) return;
+    setSaving(true);
+    
+    const categories: Record<string, any> = {};
+    settings.forEach(s => {
+      categories[s.id] = { push: s.push, email: s.email, in_app: s.inApp };
+    });
+
+    const notification_settings = {
+      sounds: sound,
+      quiet_hours: quietHours,
+      categories
+    };
+
+    try {
+      const { profile } = await api.profiles.update(user.id, { notification_settings });
+      updateUser({ notification_settings: profile.notification_settings });
+      setSaved(true);
+      toast.success("Notification preferences updated successfully");
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update preferences");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -141,10 +204,13 @@ export default function NotificationsSettingsPage() {
 
           <div className="flex justify-end pt-4">
             <button 
-              onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }}
-              className={cn("px-8 py-4 rounded-[18px] text-[13px] font-bold uppercase tracking-widest transition-all btn-press shadow-xl",
-                saved ? "bg-green-500 text-white shadow-green-500/20" : "accent-gradient text-white shadow-accent/20")}
+              disabled={saving}
+              onClick={handleApply}
+              className={cn("px-8 py-4 rounded-[18px] text-[13px] font-bold uppercase tracking-widest transition-all btn-press shadow-xl flex items-center gap-2",
+                saved ? "bg-green-500 text-white shadow-green-500/20" : "accent-gradient text-white shadow-accent/20",
+                saving && "opacity-80 cursor-wait")}
             >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {saved ? <><Check className="w-4 h-4" /> Preferences Saved</> : "Apply Changes"}
             </button>
           </div>

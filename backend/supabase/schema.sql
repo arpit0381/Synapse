@@ -37,6 +37,21 @@ CREATE TABLE IF NOT EXISTS public.profiles (
                               CHECK (status IN ('online','away','dnd','offline')),
   status_message  TEXT        DEFAULT '',
   timezone        TEXT        DEFAULT 'UTC',
+  notification_settings JSONB DEFAULT '{
+    "sounds": true,
+    "quiet_hours": "Never",
+    "categories": {
+      "mentions": { "push": true, "email": true, "in_app": true },
+      "dms": { "push": true, "email": false, "in_app": true },
+      "tasks": { "push": true, "email": true, "in_app": true },
+      "channels": { "push": false, "email": false, "in_app": true },
+      "email_digest": { "push": false, "email": true, "in_app": false }
+    }
+  }'::jsonb,
+  appearance_settings JSONB DEFAULT '{
+    "font_size": "Default",
+    "density": "Comfortable"
+  }'::jsonb,
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
@@ -49,11 +64,26 @@ CREATE TRIGGER trg_profiles_updated_at
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, username)
+  INSERT INTO public.profiles (id, full_name, username, notification_settings, appearance_settings)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email,'@',1)),
-    lower(regexp_replace(split_part(NEW.email,'@',1),'[^a-z0-9]','','g'))
+    lower(regexp_replace(split_part(NEW.email,'@',1),'[^a-z0-9]','','g')),
+    '{
+      "sounds": true,
+      "quiet_hours": "Never",
+      "categories": {
+        "mentions": { "push": true, "email": true, "in_app": true },
+        "dms": { "push": true, "email": false, "in_app": true },
+        "tasks": { "push": true, "email": true, "in_app": true },
+        "channels": { "push": false, "email": false, "in_app": true },
+        "email_digest": { "push": false, "email": true, "in_app": false }
+      }
+    }'::jsonb,
+    '{
+      "font_size": "Default",
+      "density": "Comfortable"
+    }'::jsonb
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;

@@ -21,6 +21,7 @@ import profileRouter from "./routes/profiles";
 import bookmarkRouter from "./routes/bookmarks";
 import pinRouter from "./routes/pins";
 import { supabaseAdmin } from "./lib/supabase";
+import { shouldSendNotification } from "./lib/notifications";
 
 const app = express();
 const server = http.createServer(app);
@@ -218,34 +219,39 @@ io.on("connection", (socket) => {
   socket.on("send_dm", async (msg: { id: string; workspaceId: string; toUserId: string; fromUserId: string; fromUserName: string; content: string; timestamp: string }) => {
     io.to(`user:${msg.toUserId}`).emit("new_dm", msg);
 
-    // Persist notification to DB
-    await supabaseAdmin.from("notifications").insert({
-      user_id: msg.toUserId,
-      workspace_id: msg.workspaceId,
-      type: "dm",
-      title: "New message",
-      body: msg.content.slice(0, 80),
-      link: `/dm/${msg.fromUserId}`,
-      metadata: { from_user_id: msg.fromUserId, message_id: msg.id },
-    });
+    // Check if user wants in-app notification for DMs
+    const sendInApp = await shouldSendNotification(msg.toUserId, "dms", "in_app");
 
-    // Emit rich DM notification for toast
-    io.to(`user:${msg.toUserId}`).emit("notification:dm", {
-      type: "dm",
-      title: `Message from ${msg.fromUserName}`,
-      body: msg.content.slice(0, 120),
-      senderName: msg.fromUserName,
-      senderId: msg.fromUserId,
-      messageId: msg.id,
-    });
+    if (sendInApp) {
+      // Persist notification to DB
+      await supabaseAdmin.from("notifications").insert({
+        user_id: msg.toUserId,
+        workspace_id: msg.workspaceId,
+        type: "dm",
+        title: "New message",
+        body: msg.content.slice(0, 80),
+        link: `/dm/${msg.fromUserId}`,
+        metadata: { from_user_id: msg.fromUserId, message_id: msg.id },
+      });
 
-    // Also emit generic notification:new for badge count
-    io.to(`user:${msg.toUserId}`).emit("notification:new", {
-      type: "dm",
-      title: `New message from ${msg.fromUserName}`,
-      body: msg.content.slice(0, 120),
-      link: `/dm/${msg.fromUserId}`,
-    });
+      // Emit rich DM notification for toast
+      io.to(`user:${msg.toUserId}`).emit("notification:dm", {
+        type: "dm",
+        title: `Message from ${msg.fromUserName}`,
+        body: msg.content.slice(0, 120),
+        senderName: msg.fromUserName,
+        senderId: msg.fromUserId,
+        messageId: msg.id,
+      });
+
+      // Also emit generic notification:new for badge count
+      io.to(`user:${msg.toUserId}`).emit("notification:new", {
+        type: "dm",
+        title: `New message from ${msg.fromUserName}`,
+        body: msg.content.slice(0, 120),
+        link: `/dm/${msg.fromUserId}`,
+      });
+    }
   });
 
   socket.on("join_dm", ({ userId }: { userId: string }) => {
@@ -623,36 +629,41 @@ io.on("connection", (socket) => {
         if (targetMember && targetMember.user_id !== senderId && !notifiedUserIds.has(targetMember.user_id)) {
           notifiedUserIds.add(targetMember.user_id);
 
-          // Insert notification to DB
-          await supabaseAdmin.from("notifications").insert({
-            user_id: targetMember.user_id,
-            workspace_id: channel.workspace_id,
-            type: "mention",
-            title: `${senderName} mentioned you in #${channelName}`,
-            body: content.slice(0, 120),
-            link: `/channels/${channelId}`,
-            metadata: { sender_id: senderId, channel_id: channelId, mention_type: "user" },
-          });
+          // Check user preferences for mentions
+          const sendInApp = await shouldSendNotification(targetMember.user_id, "mentions", "in_app");
 
-          // Emit rich mention notification for toast
-          io.to(`user:${targetMember.user_id}`).emit("notification:mention", {
-            type: "mention",
-            title: `${senderName} tagged you`,
-            body: content.slice(0, 120),
-            channelName,
-            channelId,
-            senderName,
-            senderId,
-            mentionType: "user",
-          });
+          if (sendInApp) {
+            // Insert notification to DB
+            await supabaseAdmin.from("notifications").insert({
+              user_id: targetMember.user_id,
+              workspace_id: channel.workspace_id,
+              type: "mention",
+              title: `${senderName} mentioned you in #${channelName}`,
+              body: content.slice(0, 120),
+              link: `/channels/${channelId}`,
+              metadata: { sender_id: senderId, channel_id: channelId, mention_type: "user" },
+            });
 
-          // Also emit generic notification:new for badge count
-          io.to(`user:${targetMember.user_id}`).emit("notification:new", {
-            type: "mention",
-            title: `${senderName} mentioned you in #${channelName}`,
-            body: content.slice(0, 120),
-            link: `/channels/${channelId}`,
-          });
+            // Emit rich mention notification for toast
+            io.to(`user:${targetMember.user_id}`).emit("notification:mention", {
+              type: "mention",
+              title: `${senderName} tagged you`,
+              body: content.slice(0, 120),
+              channelName,
+              channelId,
+              senderName,
+              senderId,
+              mentionType: "user",
+            });
+
+            // Also emit generic notification:new for badge count
+            io.to(`user:${targetMember.user_id}`).emit("notification:new", {
+              type: "mention",
+              title: `${senderName} mentioned you in #${channelName}`,
+              body: content.slice(0, 120),
+              link: `/channels/${channelId}`,
+            });
+          }
         }
       }
 
