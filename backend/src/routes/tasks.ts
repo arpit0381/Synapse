@@ -62,7 +62,8 @@ const CreateTaskSchema = z.object({
   metadata: z.any().optional(),
 });
 
-router.post("/", requireRole(["owner", "admin"]), async (req: Request, res: Response) => {
+router.post("/", requireRole(["owner", "admin", "member"]), async (req: Request, res: Response) => {
+  const { io } = require("../index");
   const parse = CreateTaskSchema.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Invalid input", details: parse.error.flatten() }); return; }
 
@@ -106,7 +107,6 @@ router.post("/", requireRole(["owner", "admin"]), async (req: Request, res: Resp
         });
 
         // Real-time notification
-        const { io } = require("../index");
         if (io) {
           io.to(`user:${uid}`).emit("notification:new", {
             type: "task_assigned",
@@ -130,6 +130,11 @@ router.post("/", requireRole(["owner", "admin"]), async (req: Request, res: Resp
     entity_id: task.id,
     entity_name: task.title
   });
+
+  // Emit workspace-wide event
+  if (io) {
+    io.to(`workspace:${task.workspace_id}`).emit("task:created", { task });
+  }
 
   res.status(201).json({ task });
 });
@@ -175,6 +180,12 @@ router.patch("/:id", async (req: Request, res: Response) => {
     }
   }
 
+  // Emit workspace-wide event
+  const { io } = require("../index");
+  if (io && workspace_id) {
+    io.to(`workspace:${workspace_id}`).emit("task:updated", { task: data });
+  }
+
   res.json({ task: data });
 });
 
@@ -186,6 +197,12 @@ router.delete("/:id", async (req: Request, res: Response) => {
 
   const { error } = await supabaseAdmin.from("tasks").delete().eq("id", (req.params as any).id);
   if (error) { res.status(400).json({ error: error.message }); return; }
+  // Emit workspace-wide event
+  const { io } = require("../index");
+  if (io) {
+    io.to(`workspace:${workspace_id}`).emit("task:deleted", { id: (req.params as any).id });
+  }
+
   res.json({ success: true });
 });
 

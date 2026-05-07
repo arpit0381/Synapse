@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/appStore";
 import { useCallStore } from "@/store/callStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { getSocket, connectSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
+import toast from "react-hot-toast";
+import { Bell } from "lucide-react";
 
 export function AppInitializer() {
   const router = useRouter();
@@ -19,6 +22,7 @@ export function AppInitializer() {
     setCurrentWorkspace, setChannels, setUserOnline, setUserOffline,
     updatePresence, syncPresence, setUnreadNotifications, setCurrentUserRole
   } = useAppStore();
+  const queryClient = useQueryClient();
 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
@@ -123,11 +127,70 @@ export function AppInitializer() {
     socket.on("notification:new", (notif: any) => {
       const current = useAppStore.getState().unreadNotifications;
       setUnreadNotifications(current + 1);
+
+      // Play notification sound
+      try {
+        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3");
+        audio.volume = 0.5;
+        audio.play();
+      } catch (err) {
+        console.error("Audio play failed:", err);
+      }
+
+      // Show toast
+      toast.custom((t) => (
+        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-surface/90 backdrop-blur-xl shadow-2xl rounded-2xl pointer-events-auto flex ring-1 ring-accent/20 border border-white/10`}>
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
+                  <Bell className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-black text-foreground">
+                  {notif.title || "New Notification"}
+                </p>
+                <p className="mt-1 text-xs font-medium text-muted-foreground line-clamp-2 italic">
+                  {notif.body}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex border-l border-white/5">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="w-full border border-transparent rounded-none rounded-r-2xl p-4 flex items-center justify-center text-xs font-black text-accent hover:text-accent/80 focus:outline-none"
+            >
+              DISMISS
+            </button>
+          </div>
+        </div>
+      ), { duration: 6000 });
+
       // Show browser notification if supported
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification(notif.title, { body: notif.body, icon: "/favicon.ico" });
       }
     });
+
+    // Real-time Task Listeners
+    socket.on("task:created", () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_user_tasks"] });
+    });
+
+    socket.on("task:updated", () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_user_tasks"] });
+    });
+
+    socket.on("task:deleted", () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_user_tasks"] });
+    });
+
+    // Call events ...
 
     // Call events for sidebar indicators
     const callStore = useCallStore.getState();

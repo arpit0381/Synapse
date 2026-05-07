@@ -10,8 +10,9 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import { cn, getGreeting, getGreetingEmoji, stringToColor, formatRelativeTime, PRIORITY_CONFIG, getInitials } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import toast from "react-hot-toast";
 
 // ── Skeleton component ────────────────────────────────────────────
 function StatSkeleton() {
@@ -80,7 +81,25 @@ export default function DashboardPage() {
   const greeting = mounted ? getGreeting() : "Hello";
   const emoji = mounted ? getGreetingEmoji() : "👋";
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
-  const tasks = tasksData?.tasks || [];
+  const tasks = (tasksData?.tasks || []).filter((t: any) => t.status !== "done");
+
+  // Mutation for completing tasks
+  const queryClient = useQueryClient();
+  const completeMutation = useMutation({
+    mutationFn: (id: string) => api.tasks.update(id, { status: "done" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard_user_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Task marked as completed!");
+    }
+  });
+
+  const handleComplete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    completeMutation.mutate(id);
+  };
+
   const activities = activityData?.activity || [];
 
   return (
@@ -170,9 +189,14 @@ export default function DashboardPage() {
                     <motion.div
                       key={task.id}
                       whileHover={{ x: 8 }}
-                      className="group flex items-center gap-5 p-5 rounded-[24px] bg-surface/40 border border-border/50 hover:border-accent/40 hover:bg-surface transition-all cursor-pointer"
+                      className="group flex items-center gap-5 p-5 rounded-[24px] bg-surface/40 border border-border/50 hover:border-accent/40 hover:bg-surface transition-all cursor-pointer relative overflow-hidden"
                     >
-                      <div className={cn("w-3 h-3 rounded-full flex-shrink-0 shadow-lg", pc.color.replace("text-", "bg-"))} />
+                      <button 
+                        onClick={(e) => handleComplete(e, task.id)}
+                        className="w-10 h-10 rounded-full border-2 border-border/60 flex items-center justify-center text-muted-foreground/40 hover:border-green-500 hover:bg-green-500/10 hover:text-green-500 transition-all flex-shrink-0 group/check"
+                      >
+                        <CheckCircle2 className="w-5 h-5 group-hover/check:scale-110" />
+                      </button>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-bold text-foreground truncate group-hover:text-accent transition-colors">{task.title}</h3>
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-1 opacity-60">{task.description || "No description provided."}</p>

@@ -92,6 +92,7 @@ export function CreateTaskModal({ isOpen, onClose, onSuccess, initialStatus = "b
 
   const toggleAssignee = (uid: string) => {
     setAssigneeIds(prev => prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]);
+    setShowMemberSelector(false);
   };
 
   return (
@@ -109,7 +110,7 @@ export function CreateTaskModal({ isOpen, onClose, onSuccess, initialStatus = "b
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-xl bg-surface border border-border shadow-2xl rounded-2xl"
+            className="relative w-[95%] max-w-xl mx-auto bg-surface border border-border shadow-2xl rounded-2xl sm:w-full"
           >
             <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30 rounded-t-2xl">
               <div className="flex items-center gap-2">
@@ -123,7 +124,7 @@ export function CreateTaskModal({ isOpen, onClose, onSuccess, initialStatus = "b
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div className="space-y-4">
                 <input
                   autoFocus
@@ -232,10 +233,10 @@ export function CreateTaskModal({ isOpen, onClose, onSuccess, initialStatus = "b
                       <AnimatePresence>
                         {showMemberSelector && (
                           <motion.div 
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute left-0 top-full mt-2 w-56 max-h-60 overflow-y-auto bg-surface border border-border rounded-xl shadow-2xl z-[110] p-2 custom-scrollbar"
+                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                            className="absolute right-0 bottom-full mb-2 w-64 max-h-60 overflow-y-auto bg-surface border border-border rounded-xl shadow-2xl z-[110] p-2 custom-scrollbar sm:w-72"
                           >
                             <div className="px-2 py-1.5 mb-1 border-b border-border/50">
                               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Select Members</span>
