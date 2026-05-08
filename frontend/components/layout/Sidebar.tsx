@@ -55,7 +55,7 @@ function RailTooltip({ children, label }: { children: React.ReactNode; label: st
             initial={{ opacity: 0, x: -4 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -4 }}
-            className="absolute left-[calc(100%+14px)] top-1/2 -translate-y-1/2 z-[100] px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold whitespace-nowrap shadow-xl pointer-events-none"
+            className="hidden md:block absolute left-[calc(100%+14px)] top-1/2 -translate-y-1/2 z-[100] px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold whitespace-nowrap shadow-xl pointer-events-none"
           >
             {label}
             <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-[4px] w-2 h-2 rotate-45 bg-foreground rounded-sm" />
@@ -235,28 +235,35 @@ export default function Sidebar() {
       </AnimatePresence>
 
       <div className={cn(
-        "fixed left-0 top-0 bottom-0 z-50 flex h-full transition-all duration-[400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
-        "lg:relative lg:z-auto",
+        "fixed left-0 top-0 bottom-0 z-50 flex h-full transition-all duration-[400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] shadow-2xl",
+        "lg:relative lg:z-auto lg:shadow-none",
         sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-        "md:flex", // Always show on tablet+ (as icon rail or full)
+        "md:flex", 
       )}>
+        {/* Mobile Overlay Backdrop */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[-1] lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
         {/* ── Icon Rail (Primary Nav) ── */}
-        <div className="w-[76px] bg-[#4B39EF] dark:bg-[#3B28CC] border-r border-black/10 flex-shrink-0 flex flex-col items-center py-4 z-50 shadow-xl relative">
+        <div className="w-[64px] md:w-[76px] bg-[#4B39EF] dark:bg-[#3B28CC] border-r border-black/10 flex-shrink-0 flex flex-col items-center py-4 z-50 shadow-xl relative">
           {/* Workspace Button */}
           <RailTooltip label="Switch Workspace">
             <button
               onClick={() => setWorkspaceSwitcherOpen(true)}
-              className="w-12 h-12 rounded-[14px] bg-white text-[#4B39EF] flex items-center justify-center shadow-lg hover:scale-105 hover:rounded-[10px] transition-all duration-300 btn-press group relative mb-6"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-[12px] md:rounded-[14px] bg-white text-[#4B39EF] flex items-center justify-center shadow-lg hover:scale-105 hover:rounded-[10px] transition-all duration-300 btn-press group relative mb-6"
             >
-              <Zap className="w-6 h-6 group-hover:animate-pulse" />
+              <Zap className="w-5 h-5 md:w-6 md:h-6 group-hover:animate-pulse" />
             </button>
           </RailTooltip>
 
           <div className="w-8 h-px bg-white/20 mb-4" />
 
           {/* Rail Nav Items */}
-          <div className="flex-1 w-full flex flex-col items-center gap-2 overflow-y-auto hide-scrollbar">
+          <div className="flex-1 w-full flex flex-col items-center gap-1 md:gap-2 overflow-y-auto hide-scrollbar">
             {RAIL_ITEMS
               .filter(item => !item.roles || item.roles.includes(currentUserRole || "member"))
               .map((item) => {
@@ -264,19 +271,19 @@ export default function Sidebar() {
                 return (
                   <RailTooltip key={item.href} label={item.label}>
                     <Link href={item.href} onClick={() => setSidebarOpen(false)} className="w-full flex flex-col items-center group/rail">
-                      <div className="relative flex flex-col items-center py-2 w-full">
+                      <div className="relative flex flex-col items-center py-1.5 md:py-2 w-full">
                         {/* Active indicator line */}
                         {isActive && (
-                          <motion.div layoutId="rail-indicator" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full" />
+                          <motion.div layoutId="rail-indicator" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 md:h-8 bg-white rounded-r-full" />
                         )}
 
                         <div className={cn(
-                          "w-[46px] h-[46px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 group-hover/rail:bg-white/10",
+                          "w-[40px] h-[40px] md:w-[46px] md:h-[46px] rounded-xl md:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 group-hover/rail:bg-white/10",
                           isActive ? "bg-white/20 text-white" : "text-white/70"
                         )}>
-                          <item.icon className={cn("w-6 h-6 transition-transform duration-200", !isActive && "group-hover/rail:scale-110")} />
+                          <item.icon className={cn("w-5 h-5 md:w-6 md:h-6 transition-transform duration-200", !isActive && "group-hover/rail:scale-110")} />
                         </div>
-                        <span className={cn("text-[10px] font-medium mt-1 tracking-wide", isActive ? "text-white" : "text-white/70")}>
+                        <span className={cn("text-[8px] md:text-[10px] font-medium mt-1 tracking-wide", isActive ? "text-white" : "text-white/70")}>
                           {item.label}
                         </span>
                       </div>
@@ -293,12 +300,12 @@ export default function Sidebar() {
             {displayUser && (
               <RailTooltip label="Profile Settings">
                 <Link href="/settings/profile" onClick={() => setSidebarOpen(false)} className="relative group/profile btn-press">
-                  <div className="w-11 h-11 rounded-full p-0.5 bg-gradient-to-br from-white/30 to-white/10 group-hover/profile:from-white group-hover/profile:to-white/50 transition-all duration-300">
-                    <div className="w-full h-full rounded-full bg-surface flex items-center justify-center overflow-hidden border-[1.5px] border-[#4B39EF] text-white font-bold text-xs" style={{ backgroundColor: displayUser.avatar_url ? 'transparent' : stringToColor(displayUser.name) }}>
+                  <div className="w-9 h-9 md:w-11 md:h-11 rounded-full p-0.5 bg-gradient-to-br from-white/30 to-white/10 group-hover/profile:from-white group-hover/profile:to-white/50 transition-all duration-300">
+                    <div className="w-full h-full rounded-full bg-surface flex items-center justify-center overflow-hidden border-[1.5px] border-[#4B39EF] text-white font-bold text-[10px] md:text-xs" style={{ backgroundColor: displayUser.avatar_url ? 'transparent' : stringToColor(displayUser.name) }}>
                       {displayUser.avatar_url ? <img src={displayUser.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(displayUser.name)}
                     </div>
                   </div>
-                  <div className={cn("absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-[2.5px] border-[#4B39EF]", STATUS_COLORS[getStatus(displayUser.id)] || STATUS_COLORS.online)} />
+                  <div className={cn("absolute bottom-0 right-0 w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full border-[2px] border-[#4B39EF]", STATUS_COLORS[getStatus(displayUser.id)] || STATUS_COLORS.online)} />
                 </Link>
               </RailTooltip>
             )}
@@ -309,13 +316,13 @@ export default function Sidebar() {
         <div
           className={cn(
             "bg-surface/95 backdrop-blur-xl border-r border-border/60 overflow-hidden flex flex-col h-full z-40 shadow-2xl lg:shadow-none transition-all duration-[400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
-            "w-[260px] opacity-100", // Default width
+            "w-[230px] md:w-[260px] opacity-100", // Responsive width
             "hidden xl:flex", // Only show secondary panel on desktop (xl+) by default
             sidebarOpen && "flex", // Show on mobile/tablet when toggled
             (!isChatRoute && !sidebarOpen) && "xl:w-0 xl:border-r-0 xl:opacity-0"
           )}
         >
-          <div className="w-[260px] flex flex-col h-full">
+          <div className="w-full flex flex-col h-full overflow-hidden">
             {/* Header Context */}
             <div className="px-5 py-5 border-b border-border/40 flex-shrink-0 flex items-center justify-between">
               <h1 className="font-display font-bold text-lg text-foreground tracking-tight truncate pr-2">
