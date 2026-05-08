@@ -191,14 +191,13 @@ io.on("connection", (socket) => {
   });
 
   // ── New message ────────────────────────────────────────────────
-  socket.on("send_message", (msg: {
-    id: string; channelId: string; userId: string; userName: string;
-    content: string; timestamp: string;
-  }) => {
+  socket.on("send_message", async (msg: { id: string; channelId: string; userId: string; userName: string; userAvatar?: string; content: string; timestamp: string; type?: string; metadata?: any }) => {
     io.to(`channel:${msg.channelId}`).emit("new_message", msg);
-
-    // Parse @mentions and create notifications
-    parseMentionsAndNotify(msg.content, msg.userId, msg.userName, msg.channelId);
+    
+    // Parse mentions
+    parseMentionsAndNotify(msg.content, msg.userId, msg.userName, msg.channelId, msg.userAvatar).catch(err => {
+      console.error("[Socket] Mention parsing error:", err);
+    });
   });
 
   // ── Typing indicator ───────────────────────────────────────────
@@ -228,10 +227,10 @@ io.on("connection", (socket) => {
         user_id: msg.toUserId,
         workspace_id: msg.workspaceId,
         type: "dm",
-        title: "New message",
+        title: `Message from ${msg.fromUserName}`,
         body: msg.content.slice(0, 80),
         link: `/dm/${msg.fromUserId}`,
-        metadata: { from_user_id: msg.fromUserId, message_id: msg.id },
+        metadata: { from_user_id: msg.fromUserId, message_id: msg.id, sender_name: msg.fromUserName },
       });
 
       // Emit rich DM notification for toast
@@ -547,7 +546,7 @@ io.on("connection", (socket) => {
   }
 
   // ── Helper: Parse @mentions and create notifications ───────────
-  async function parseMentionsAndNotify(content: string, senderId: string, senderName: string, channelId: string) {
+  async function parseMentionsAndNotify(content: string, senderId: string, senderName: string, channelId: string, senderAvatar?: string) {
     const mentionRegex = /@(\w[\w.]*\w|\w)/g;
     const mentions = content.match(mentionRegex);
     if (!mentions || mentions.length === 0) return;
@@ -591,7 +590,7 @@ io.on("connection", (socket) => {
               title: `${senderName} mentioned @${name} in #${channelName}`,
               body: content.slice(0, 120),
               link: `/channels/${channelId}`,
-              metadata: { sender_id: senderId, channel_id: channelId, mention_type: name },
+              metadata: { sender_id: senderId, channel_id: channelId, mention_type: name, sender_name: senderName, sender_avatar: senderAvatar, channel_name: channelName },
             });
 
             io.to(`user:${member.user_id}`).emit("notification:mention", {

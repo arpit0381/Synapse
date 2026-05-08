@@ -70,20 +70,20 @@ router.post("/", async (req: Request, res: Response) => {
   // Push to sender's socket room as well (for multi-device sync)
   io.to(`user:${from_user_id}`).emit("new_dm", msg);
 
+  // Safely extract sender name (handle potential array from Supabase join)
+  const sender = Array.isArray(msg.sender) ? msg.sender[0] : msg.sender;
+  const senderName = sender?.full_name || sender?.username || "Someone";
+
   // Insert notification for recipient
   await supabaseAdmin.from("notifications").insert({
     user_id: to_user_id,
     workspace_id,
     type: "dm",
-    title: "New message",
+    title: `Message from ${senderName}`,
     body: content.slice(0, 80),
     link: `/dm/${from_user_id}`,
-    metadata: { from_user_id, message_id: msg.id },
+    metadata: { from_user_id, message_id: msg.id, sender_name: senderName, sender_avatar: sender?.avatar_url },
   });
-
-  // Safely extract sender name (handle potential array from Supabase join)
-  const sender = Array.isArray(msg.sender) ? msg.sender[0] : msg.sender;
-  const senderName = sender?.full_name || "Someone";
 
   // Emit rich DM notification for toast
   io.to(`user:${to_user_id}`).emit("notification:dm", {

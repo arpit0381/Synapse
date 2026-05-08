@@ -55,7 +55,7 @@ export default function AiAssistantPage() {
   const { data: modelsData } = useQuery({
     queryKey: ["aiModels"],
     queryFn: async () => {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
       const res = await fetch(`${API_BASE}/api/ai/models`);
       return res.json();
     }
@@ -86,7 +86,7 @@ export default function AiAssistantPage() {
         .filter(m => m.id !== "welcome")
         .map(m => ({ role: m.role, content: m.content }));
 
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
       const res = await fetch(`${API_BASE}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -68,13 +68,14 @@ router.post("/", async (req: Request, res: Response) => {
 
   // Parse @mentions and create notifications (fire-and-forget)
   const senderName = (msg as any).profiles?.full_name || (msg as any).profiles?.username || "Someone";
-  parseMentionsFromREST(parse.data.content, parse.data.user_id, senderName, parse.data.channel_id).catch(console.error);
+  const senderAvatar = (msg as any).profiles?.avatar_url;
+  parseMentionsFromREST(parse.data.content, parse.data.user_id, senderName, parse.data.channel_id, senderAvatar).catch(console.error);
 
   res.status(201).json({ message: msg });
 });
 
 // ── Helper: Parse @mentions from REST-sent messages ──────────────
-async function parseMentionsFromREST(content: string, senderId: string, senderName: string, channelId: string) {
+async function parseMentionsFromREST(content: string, senderId: string, senderName: string, channelId: string, senderAvatar?: string) {
   const mentionRegex = /@(\w[\w.]*\w|\w)/g;
   const mentions = content.match(mentionRegex);
   if (!mentions || mentions.length === 0) return;
@@ -114,7 +115,7 @@ async function parseMentionsFromREST(content: string, senderId: string, senderNa
             title: `${senderName} mentioned @${name} in #${channelName}`,
             body: content.slice(0, 120),
             link: `/channels/${channelId}`,
-            metadata: { sender_id: senderId, channel_id: channelId, mention_type: name },
+            metadata: { sender_id: senderId, channel_id: channelId, mention_type: name, sender_name: senderName, sender_avatar: senderAvatar, channel_name: channelName },
           });
 
           io.to(`user:${member.user_id}`).emit("notification:mention", {
@@ -148,7 +149,7 @@ async function parseMentionsFromREST(content: string, senderId: string, senderNa
           title: `${senderName} mentioned you in #${channelName}`,
           body: content.slice(0, 120),
           link: `/channels/${channelId}`,
-          metadata: { sender_id: senderId, channel_id: channelId, mention_type: "user" },
+          metadata: { sender_id: senderId, channel_id: channelId, mention_type: "user", sender_name: senderName, sender_avatar: senderAvatar, channel_name: channelName },
         });
 
         io.to(`user:${targetMember.user_id}`).emit("notification:mention", {

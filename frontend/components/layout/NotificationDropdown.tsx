@@ -206,31 +206,54 @@ export function NotificationDropdown() {
 function NotificationItem({ notif, onClick }: { notif: any; onClick: (n: any) => void }) {
   const Icon = TYPE_ICONS[notif.type] || Bell;
   const colorClass = TYPE_COLORS[notif.type] || TYPE_COLORS.system;
+  const metadata = notif.metadata || {};
+  const senderAvatar = metadata.sender_avatar;
+  const senderName = metadata.sender_name || metadata.from_user_name || "Someone";
 
   return (
     <button
       onClick={() => onClick(notif)}
       className={cn(
-        "w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50",
-        !notif.is_read && "bg-accent/5"
+        "w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border/10 last:border-0",
+        !notif.is_read && "bg-accent/[0.03]"
       )}
     >
-      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5", colorClass)}>
-        <Icon className="w-4 h-4" />
+      <div className="relative flex-shrink-0 mt-0.5">
+        {senderAvatar ? (
+          <div className="w-9 h-9 rounded-xl overflow-hidden shadow-sm ring-1 ring-border/20">
+            <img src={senderAvatar} alt="" className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shadow-sm", colorClass)}>
+            <Icon className="w-4 h-4" />
+          </div>
+        )}
+        {!notif.is_read && (
+          <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent border-2 border-surface" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <p className={cn("text-sm leading-snug", !notif.is_read && "font-semibold")}>{notif.title}</p>
-          {!notif.is_read && (
-            <div className="w-2 h-2 rounded-full bg-accent flex-shrink-0 mt-1.5" />
-          )}
+          <p className={cn("text-sm leading-snug", !notif.is_read ? "font-bold text-foreground" : "font-medium text-foreground/80")}>
+            {notif.title}
+          </p>
         </div>
         {notif.body && (
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.body}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed italic">
+            &quot;{notif.body}&quot;
+          </p>
         )}
-        <p className="text-[10px] text-muted-foreground/60 mt-1">
-          {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
-        </p>
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
+            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+          </span>
+          {notif.type === "dm" && (
+            <span className="text-[10px] font-black text-blue-500/60 uppercase tracking-widest bg-blue-500/5 px-1.5 py-0.5 rounded">DM</span>
+          )}
+          {notif.type === "mention" && (
+            <span className="text-[10px] font-black text-purple-500/60 uppercase tracking-widest bg-purple-500/5 px-1.5 py-0.5 rounded">MENTION</span>
+          )}
+        </div>
       </div>
     </button>
   );

@@ -89,7 +89,7 @@ router.post("/", requireRole(["owner", "admin", "member"]), async (req: Request,
     try {
       const { data: creator } = await supabaseAdmin
         .from("profiles")
-        .select("full_name")
+        .select("full_name, avatar_url")
         .eq("id", task.created_by)
         .single();
 
@@ -103,7 +103,7 @@ router.post("/", requireRole(["owner", "admin", "member"]), async (req: Request,
           title: "New Task Assigned",
           body: `${creator?.full_name || "Someone"} assigned you a task: ${task.title}`,
           link: `/tasks`,
-          metadata: { task_id: task.id }
+          metadata: { task_id: task.id, sender_name: creator?.full_name, sender_avatar: (creator as any)?.avatar_url }
         });
 
         // Real-time notification
@@ -112,7 +112,8 @@ router.post("/", requireRole(["owner", "admin", "member"]), async (req: Request,
             type: "task_assigned",
             title: "New Task Assigned",
             body: `${creator?.full_name || "Someone"} assigned you a task: ${task.title}`,
-            link: `/tasks`
+            link: `/tasks`,
+            metadata: { sender_name: creator?.full_name, sender_avatar: (creator as any)?.avatar_url }
           });
         }
       }
