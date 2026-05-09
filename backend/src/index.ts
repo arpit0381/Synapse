@@ -1,3 +1,4 @@
+// Synapse Lite Backend - Collaborative Engine
 import express from "express";
 import http from "http";
 import cors from "cors";
@@ -20,8 +21,10 @@ import analyticsRouter from "./routes/analytics";
 import profileRouter from "./routes/profiles";
 import bookmarkRouter from "./routes/bookmarks";
 import pinRouter from "./routes/pins";
+import appsRouter from "./routes/apps";
 import { supabaseAdmin } from "./lib/supabase";
 import { shouldSendNotification } from "./lib/notifications";
+import { setupYjs } from "./lib/yjs";
 
 const app = express();
 const server = http.createServer(app);
@@ -692,6 +695,7 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/profiles", profileRouter);
 app.use("/api/bookmarks", bookmarkRouter);
 app.use("/api/pins", pinRouter);
+app.use("/api/apps", appsRouter);
 
 // ── 404 ────────────────────────────────────────────────────────────
 app.use((_req, res) => { res.status(404).json({ error: "Route not found" }); });
@@ -705,6 +709,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // ── Start ──────────────────────────────────────────────────────────
 const PORT = Number(process.env.PORT) || 4000;
 server.listen(PORT, () => {
+  setupYjs(io);
   console.log(`✅ Synapse backend running on http://localhost:${PORT}`);
   console.log(`🔌 Socket.io ready`);
 });

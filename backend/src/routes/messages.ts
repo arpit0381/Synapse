@@ -43,7 +43,7 @@ const SendMessageSchema = z.object({
   channel_id: z.string().uuid(),
   user_id: z.string().uuid(),
   content: z.string().min(1).max(4000),
-  content_type: z.enum(["text", "image", "file", "system"]).default("text"),
+  content_type: z.enum(["text", "image", "file", "system", "embed"]).default("text"),
   parent_id: z.string().uuid().optional(),
   metadata: z.record(z.unknown()).optional(),
 });
@@ -52,9 +52,60 @@ router.post("/", async (req: Request, res: Response) => {
   const parse = SendMessageSchema.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Invalid input", details: parse.error.flatten() }); return; }
 
+  let finalData = parse.data;
+
+  // ── Slash Command Processing ────────────────────────────────────
+  if (finalData.content.startsWith("/")) {
+    const parts = finalData.content.split(" ");
+    const command = parts[0].toLowerCase();
+    const title = parts.slice(1).join(" ") || "Untitled";
+
+    try {
+      // Get workspace_id for the channel
+      const { data: channel } = await supabaseAdmin
+        .from("channels")
+        .select("workspace_id")
+        .eq("id", finalData.channel_id)
+        .single();
+
+      if (channel) {
+        if (command === "/doc") {
+          const { data: doc } = await supabaseAdmin.from("documents").insert({ 
+            title, workspace_id: channel.workspace_id, created_by: finalData.user_id 
+          }).select().single();
+          if (doc) {
+            finalData.content_type = "embed";
+            finalData.metadata = { ...finalData.metadata, type: "document", id: doc.id, title: doc.title };
+            finalData.content = `📄 Created new document: **${title}**`;
+          }
+        } else if (command === "/sheet") {
+          const { data: sheet } = await supabaseAdmin.from("sheets").insert({ 
+            title, workspace_id: channel.workspace_id, created_by: finalData.user_id 
+          }).select().single();
+          if (sheet) {
+            finalData.content_type = "embed";
+            finalData.metadata = { ...finalData.metadata, type: "sheet", id: sheet.id, title: sheet.title };
+            finalData.content = `📊 Created new spreadsheet: **${title}**`;
+          }
+        } else if (command === "/task") {
+          const { data: task } = await supabaseAdmin.from("tasks").insert({ 
+            title, workspace_id: channel.workspace_id, created_by: finalData.user_id, status: "todo", priority: "medium" 
+          }).select().single();
+          if (task) {
+            finalData.content_type = "embed";
+            finalData.metadata = { ...finalData.metadata, type: "task", id: task.id, title: task.title };
+            finalData.content = `✅ Created new task: **${title}**`;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[Slash Command] Error:", err);
+    }
+  }
+
   const { data: msg, error } = await supabaseAdmin
     .from("messages")
-    .insert(parse.data)
+    .insert(finalData)
     .select(`
       id, channel_id, user_id, content, content_type, is_pinned, is_edited, metadata, created_at, parent_id,
       profiles:user_id ( id, full_name, username, avatar_url, status )

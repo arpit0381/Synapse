@@ -39,7 +39,8 @@ export function requireRole(allowedRoles: Role[]) {
       // Attach role to request for later use if needed
       (req as any).userRole = data.role;
       next();
-    } catch (err) {
+    } catch (err: any) {
+      console.error("[Permissions] Role check error:", err.message);
       res.status(500).json({ error: "Internal permission check error" });
     }
   };

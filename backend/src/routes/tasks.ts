@@ -235,4 +235,23 @@ router.patch("/:id/subtasks/:sid", async (req: Request, res: Response) => {
   res.json({ subtask: data });
 });
 
+// ── PROJECTS ──────────────────────────────────────────────────
+// GET /api/tasks/projects/:id
+router.get("/projects/:id", async (req: Request, res: Response) => {
+  const { data, error } = await supabaseAdmin
+    .from("task_projects")
+    .select("*")
+    .eq("id", req.params.id)
+    .single();
+
+  if (error || !data) {
+    // If not found, check if it's a special slug like 'workspace-objectives'
+    if (req.params.id === "workspace-objectives") {
+      return res.json({ id: "workspace-objectives", name: "Workspace Objectives", description: "Default team project" });
+    }
+    return res.status(404).json({ error: "Project not found" });
+  }
+  res.json({ project: data });
+});
+
 export default router;

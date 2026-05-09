@@ -123,39 +123,53 @@ router.post("/join", async (req: Request, res: Response) => {
 
 // ── GET /api/workspaces/:id/members ────────────────────────────
 router.get("/:id/members", async (req: Request, res: Response) => {
-  const { data, error } = await supabaseAdmin
-    .from("workspace_members")
-    .select("role, joined_at, profiles(*)")
-    .eq("workspace_id", req.params.id);
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("workspace_members")
+      .select("role, joined_at, profiles(*)")
+      .eq("workspace_id", req.params.id);
 
-  if (error) { res.status(500).json({ error: error.message }); return; }
-
-  // Sync usernames if missing
-  const members = await Promise.all(data.map(async (m: any) => {
-    const profile = m.profiles;
-    if (profile && !profile.username) {
-      // Create a clean username from first name
-      const firstName = (profile.full_name || "user").split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-      // Add a small random suffix to ensure uniqueness in the DB if multiple users have the same first name
-      const username = `${firstName}_${Math.floor(Math.random() * 9999)}`;
-      
-      // Update in DB so it persists
-      await supabaseAdmin
-        .from("profiles")
-        .update({ username })
-        .eq("id", profile.id);
-      
-      profile.username = username;
+    if (error) { 
+      console.error("[Members] DB Error:", error);
+      return res.status(500).json({ error: error.message }); 
     }
-    
-    return {
-      ...profile,
-      role: m.role,
-      joined_at: m.joined_at,
-    };
-  }));
 
-  res.json({ members });
+    if (!data) return res.json({ members: [] });
+
+    // Sync usernames if missing
+    const members = await Promise.all(data.map(async (m: any) => {
+      const profile = m.profiles;
+      if (profile && !profile.username) {
+        // Create a clean username from first name
+        const firstName = (profile.full_name || "user").split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+        // Add a small random suffix to ensure uniqueness
+        const username = `${firstName}_${Math.floor(Math.random() * 9999)}`;
+        
+        try {
+          // Update in DB so it persists
+          await supabaseAdmin
+            .from("profiles")
+            .update({ username })
+            .eq("id", profile.id);
+          
+          profile.username = username;
+        } catch (updateErr) {
+          console.error("[Members] Username sync error:", updateErr);
+        }
+      }
+      
+      return {
+        ...profile,
+        role: m.role,
+        joined_at: m.joined_at,
+      };
+    }));
+
+    res.json({ members });
+  } catch (err: any) {
+    console.error("[Members] Fatal Error:", err);
+    res.status(500).json({ error: "Internal server error during members fetch", details: err.message });
+  }
 });
 
 // ── PATCH /api/workspaces/:workspace_id ──────────────────────────
