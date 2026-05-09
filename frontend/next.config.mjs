@@ -8,6 +8,15 @@ const nextConfig = {
     ],
   },
   typescript: { ignoreBuildErrors: false },
+  outputFileTracingRoot: "E:/meddynet/s2/webapps",
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:4000/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

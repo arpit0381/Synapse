@@ -19,6 +19,7 @@ import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
 import { cn, getInitials, stringToColor, formatTime, getChatDateLabel } from "@/lib/utils";
 import { CallBanner } from "@/components/layout/CallBanner";
+import { DocumentEmbed, SheetEmbed, TaskEmbed } from "@/components/chat/MessageEmbeds";
 
 // ── Types ─────────────────────────────────────────────────────────────
 interface DbMessage {
@@ -155,6 +156,11 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
               </div>
             )}
             <MentionRenderer content={msg.content} isOwn={isOwn && !isAI} currentUserId={currentUserId} />
+            
+            {/* Live Embeds */}
+            {msg.metadata?.type === "document" && <DocumentEmbed id={msg.metadata.id} title={msg.metadata.title} />}
+            {msg.metadata?.type === "sheet" && <SheetEmbed id={msg.metadata.id} title={msg.metadata.title} />}
+            {msg.metadata?.type === "task" && <TaskEmbed id={msg.metadata.id} title={msg.metadata.title} />}
           </div>
           
           {/* Reactions */}
