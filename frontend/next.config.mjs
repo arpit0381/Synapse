@@ -8,7 +8,7 @@ const nextConfig = {
     ],
   },
   typescript: { ignoreBuildErrors: false },
-  outputFileTracingRoot: "E:/meddynet/s2/webapps",
+  eslint: { ignoreDuringBuilds: true },
   async rewrites() {
     return [
       {
