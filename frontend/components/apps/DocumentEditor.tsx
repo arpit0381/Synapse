@@ -115,7 +115,9 @@ function DocumentEditorInner({ docId, initialContent, onSave, yjs, user }: Docum
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        history: false, // Collaboration handles history
+      }),
       Placeholder.configure({
         placeholder: "Write something brilliant... Type '/' for commands",
       }),

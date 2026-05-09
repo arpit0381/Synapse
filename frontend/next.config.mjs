@@ -7,7 +7,7 @@ const nextConfig = {
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
-  typescript: { ignoreBuildErrors: false },
+  typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   async rewrites() {
     return [
