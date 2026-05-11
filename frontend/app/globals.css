@@ -229,7 +229,20 @@
   .message-hover:hover .message-actions { @apply opacity-100; }
   .message-actions { @apply opacity-0 transition-opacity duration-150; }
   .focus-ring { @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background; }
-  .theme-transition { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+  .theme-transition { transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+
+  /* Call Responsiveness */
+  @media (max-width: 768px) {
+    .call-panel-width {
+      width: 100% !important;
+      position: absolute !important;
+      inset: 0 !important;
+      z-index: 100;
+    }
+    .call-grid-mobile {
+      grid-template-columns: 1fr !important;
+    }
+  }
 
   /* ── Unread Badge ──────────────────────────────────── */
   .unread-badge {
@@ -433,4 +446,34 @@
 
 .animate-pulse-subtle {
   animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* ── CALL SYSTEM ANIMATIONS ───────────────────────────────────────── */
+
+@keyframes callSpeakBar {
+  from { transform: scaleY(0.3); }
+  to   { transform: scaleY(1); }
+}
+
+@keyframes callRingPulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes callPulseGradient {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Call tile speaking glow */
+.call-speaking-glow {
+  box-shadow: 0 0 0 2.5px #23a55a, 0 0 24px 4px rgba(35,165,90,0.25);
+}
+
+/* Call control button hover */
+.call-ctrl:hover {
+  transform: scale(1.05);
+}
+.call-ctrl:active {
+  transform: scale(0.92);
 }

@@ -79,6 +79,10 @@ const activeCallRooms = new Map<string, Map<string, CallParticipant>>();
 // Track roomId metadata: roomId → { channelName, workspaceId, initiatorName, initiatorId }
 interface CallMeta { channelName: string; workspaceId?: string; initiatorName: string; initiatorId: string }
 const activeCallMeta = new Map<string, CallMeta>();
+const callRoomToDbId = new Map<string, string>();
+const callWhiteboardState = new Map<string, any[]>(); // roomId -> drawingActions
+const callPollsState = new Map<string, any[]>(); // roomId -> Poll[]
+const callQuestionsState = new Map<string, any[]>(); // roomId -> Question[]
 
 // ── Phase 7: Presence Map ──────────────────────────────────────────
 interface PresenceInfo {
@@ -388,12 +392,41 @@ io.on("connection", (socket) => {
 
     if (!activeCallRooms.has(roomId)) {
       activeCallRooms.set(roomId, new Map());
+      activeCallMeta.set(roomId, { channelName, workspaceId, initiatorName: userName, initiatorId: userId });
+
+      // Create call record in DB
+      supabaseAdmin.from("calls").insert({
+        workspace_id: workspaceId,
+        channel_id: roomId,
+        initiator_id: userId,
+        status: "active",
+        call_type: "video" // Default
+      }).select("id").single().then(({ data, error }) => {
+        if (!error && data) {
+          callRoomToDbId.set(roomId, data.id);
+        } else {
+          console.error("[DB] Failed to create call record:", error);
+        }
+      });
     }
     const room = activeCallRooms.get(roomId)!;
     const isFirst = room.size === 0;
 
     // Store participant
     room.set(userId, { userName, socketId: socket.id });
+    
+    // Track participant in DB
+    const dbCallId = callRoomToDbId.get(roomId);
+    if (dbCallId) {
+      supabaseAdmin.from("call_participants").insert({
+        call_id: dbCallId,
+        user_id: userId,
+        role: "participant",
+        joined_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.error("[DB] Failed to track participant join:", error);
+      });
+    }
     
     if (isFirst) {
       activeCallMeta.set(roomId, { 
@@ -446,6 +479,13 @@ io.on("connection", (socket) => {
     io.to(`channel:${roomId}`).emit("call-participants-update", updateData);
     if (workspaceId) io.to(`workspace:${workspaceId}`).emit("call-participants-update", updateData);
 
+    // Send existing state to the new participant
+    socket.emit("call-sync-state", {
+      whiteboard: callWhiteboardState.get(roomId) || [],
+      polls: callPollsState.get(roomId) || [],
+      questions: callQuestionsState.get(roomId) || [],
+    });
+
     console.log(`[Call] ${userName} joined call room ${roomId} in workspace ${workspaceId}`);
   });
 
@@ -467,6 +507,95 @@ io.on("connection", (socket) => {
   // ── Screen share state broadcast ──────────────────────────────
   socket.on("call-screen-share", ({ roomId, userId, isSharing }: any) => {
     io.to(`call:${roomId}`).emit("call-screen-share", { userId, isSharing });
+  });
+
+  // ── In-call chat message relay ─────────────────────────────────
+  socket.on("call-chat-message", (data: any) => {
+    socket.to(`call:${data.roomId}`).emit("call-chat-message", data);
+  });
+
+  // ── Emoji reaction broadcast ───────────────────────────────────
+  socket.on("call-reaction", (data: any) => {
+    socket.to(`call:${data.roomId}`).emit("call-reaction", data);
+  });
+
+  // ── Hand raise broadcast ───────────────────────────────────────
+  socket.on("call-raise-hand", ({ roomId, userId, isRaised }: any) => {
+    socket.to(`call:${roomId}`).emit("call-raise-hand", { userId, isRaised });
+  });
+
+  // ── Camera state broadcast ─────────────────────────────────────
+  socket.on("call-camera-update", ({ roomId, userId, isCameraOn }: any) => {
+    socket.to(`call:${roomId}`).emit("call-camera-update", { userId, isCameraOn });
+  });
+
+  // ── Whiteboard ────────────────────────────────────────────────
+  socket.on("whiteboard-draw", ({ roomId, action }: any) => {
+    if (!callWhiteboardState.has(roomId)) callWhiteboardState.set(roomId, []);
+    callWhiteboardState.get(roomId)!.push(action);
+    socket.to(`call:${roomId}`).emit("whiteboard-draw", action);
+  });
+
+  socket.on("whiteboard-clear", (roomId: string) => {
+    callWhiteboardState.set(roomId, []);
+    socket.to(`call:${roomId}`).emit("whiteboard-clear");
+  });
+
+  // ── Polls ──────────────────────────────────────────────────────
+  socket.on("call-create-poll", ({ roomId, poll }: any) => {
+    if (!callPollsState.has(roomId)) callPollsState.set(roomId, []);
+    callPollsState.get(roomId)!.push(poll);
+    socket.to(`call:${roomId}`).emit("call-poll-created", poll);
+  });
+
+  socket.on("call-vote-poll", (data: any) => {
+    const polls = callPollsState.get(data.roomId) || [];
+    const poll = polls.find(p => p.id === data.pollId);
+    if (poll) {
+      poll.options.forEach((o: any) => {
+        o.votes = (o.votes || []).filter((id: string) => id !== data.userId);
+        if (o.id === data.optionId) o.votes.push(data.userId);
+      });
+    }
+    socket.to(`call:${data.roomId}`).emit("call-poll-voted", data);
+  });
+
+  // ── Q&A ───────────────────────────────────────────────────────
+  socket.on("call-qa-ask", ({ roomId, question }: any) => {
+    if (!callQuestionsState.has(roomId)) callQuestionsState.set(roomId, []);
+    callQuestionsState.get(roomId)!.push(question);
+    socket.to(`call:${roomId}`).emit("call-qa-new", question);
+  });
+
+  socket.on("call-qa-upvote", (data: any) => {
+    const questions = callQuestionsState.get(data.roomId) || [];
+    const q = questions.find(question => question.id === data.questionId);
+    if (q) {
+      q.upvotes = (q.upvotes || []).filter((id: string) => id !== data.userId);
+      q.upvotes.push(data.userId);
+    }
+    socket.to(`call:${data.roomId}`).emit("call-qa-upvote", data);
+  });
+
+  socket.on("call-qa-answered", (data: any) => {
+    const questions = callQuestionsState.get(data.roomId) || [];
+    const q = questions.find(question => question.id === data.questionId);
+    if (q) q.isAnswered = true;
+    socket.to(`call:${data.roomId}`).emit("call-qa-answered", data);
+  });
+
+  // ── Breakout Rooms ─────────────────────────────────────────────
+  socket.on("call-assign-breakout", (data: any) => {
+    io.to(`call:${data.roomId}`).emit("call-breakout-assign", data);
+  });
+
+  // ── Collaborative Code ──────────────────────────────────────────
+  socket.on("call-code-update", (data: any) => {
+    socket.to(`call:${data.roomId}`).emit("call-code-update", data.code);
+  });
+
+  socket.on("call-language-update", (data: any) => {
+    socket.to(`call:${data.roomId}`).emit("call-language-update", data.language);
   });
 
   // ── Disconnect ─────────────────────────────────────────────────
@@ -519,6 +648,17 @@ io.on("connection", (socket) => {
       activeCallRooms.delete(roomId);
       activeCallMeta.delete(roomId);
       
+      // Close call in DB
+      const dbCallId = callRoomToDbId.get(roomId);
+      if (dbCallId) {
+        supabaseAdmin.from("calls").update({ 
+          status: "ended", 
+          ended_at: new Date().toISOString() 
+        }).eq("id", dbCallId).then(() => {
+          callRoomToDbId.delete(roomId);
+        });
+      }
+
       const endMsg = {
         id: `sys_${Date.now()}`,
         channelId: roomId,
@@ -536,6 +676,16 @@ io.on("connection", (socket) => {
       
       console.log(`[Call] Room ${roomId} ended`);
     } else {
+      // Update participant leave in DB
+      const dbCallId = callRoomToDbId.get(roomId);
+      if (dbCallId) {
+        supabaseAdmin.from("call_participants").update({ 
+          left_at: new Date().toISOString() 
+        }).match({ call_id: dbCallId, user_id: userId }).then(({ error }) => {
+          if (error) console.error("[DB] Failed to track participant leave:", error);
+        });
+      }
+
       const updateData = {
         roomId,
         count: room.size,

@@ -1,15 +1,24 @@
 import { create } from "zustand";
 
+/* ─── Types ─────────────────────────────────────────────────────── */
+
 export interface CallParticipant {
   id: string;
   name: string;
+  avatar?: string;
+  role?: "admin" | "moderator" | "member" | "guest";
   isMuted: boolean;
+  isCameraOn: boolean;
   isSpeaking: boolean;
+  isHandRaised: boolean;
+  isScreenSharing: boolean;
+  networkQuality: "excellent" | "good" | "poor" | "disconnected";
 }
 
 export interface IncomingCall {
   fromUserId: string;
   fromUserName: string;
+  fromUserAvatar?: string;
   type: "video" | "audio";
   callRoomId: string;
   isGroupCall: boolean;
@@ -22,31 +31,103 @@ export interface ActiveGroupCallInfo {
   participants: { id: string; name: string }[];
 }
 
+export interface CallChatMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  content: string;
+  timestamp: number;
+  type?: "text" | "system";
+}
+
+export interface CallReaction {
+  id: string;
+  userId: string;
+  userName: string;
+  emoji: string;
+  timestamp: number;
+}
+
+export type CallLayout = "grid" | "speaker" | "sidebar" | "fullscreen";
+export type CallPanel = "chat" | "participants" | "settings" | "polls" | "qa" | "breakout" | "code" | null;
+
+/* ─── Store Interface ───────────────────────────────────────────── */
+
 export interface CallState {
+  // ── Core call state
   isCalling: boolean;
   callRoomId: string | null;
   callType: "video" | "audio";
   isGroupCall: boolean;
   channelName: string | null;
+  callStartTime: number | null;
   incomingCall: IncomingCall | null;
 
-  // Media
+  // ── Media streams
   localStream: MediaStream | null;
+  screenStream: MediaStream | null;
   remoteStreams: Record<string, MediaStream>;
+  remoteScreenStreams: Record<string, MediaStream>;
 
-  // Controls
+  // ── Controls
   isMuted: boolean;
   isCameraOn: boolean;
   isDeafened: boolean;
+  isScreenSharing: boolean;
+  isHandRaised: boolean;
 
-  // Participants (keyed by userId)
+  // ── Layout & UI
+  layout: CallLayout;
+  activePanel: CallPanel;
+  pinnedUserId: string | null;
+  isMinimized: boolean;
+  isWhiteboardActive: boolean;
+  isStageMode: boolean;
+  requestToSpeak: Set<string>;
+  subRoomId: string | null;
+  breakoutRooms: Record<string, string[]>; // roomId -> userIds
+  backgroundImage: string | null;
+  isSummaryVisible: boolean;
+  lowDataMode: boolean;
+
+  // ── Participants
   participants: Record<string, CallParticipant>;
   speakingUserIds: Set<string>;
 
-  // For channel chat join banner
+  // ── In-call chat
+  chatMessages: CallChatMessage[];
+  unreadChatCount: number;
+
+  // ── Reactions
+  activeReactions: CallReaction[];
+
+  // ── Recording
+  isRecording: boolean;
+  recordingStartTime: number | null;
+  isPaused: boolean;
+
+  // ── Device settings
+  selectedAudioInput: string | null;
+  selectedVideoInput: string | null;
+  selectedAudioOutput: string | null;
+  availableDevices: MediaDeviceInfo[];
+
+  // ── Advanced features
+  pushToTalkEnabled: boolean;
+  pushToTalkActive: boolean;
+  noiseSuppressionEnabled: boolean;
+  backgroundBlurEnabled: boolean;
+
+  // ── Network quality
+  networkQuality: Record<string, "excellent" | "good" | "poor" | "disconnected">;
+  localNetworkQuality: "excellent" | "good" | "poor" | "disconnected";
+
+  // ── Channel banners
   activeGroupCalls: Record<string, ActiveGroupCallInfo>;
 
-  // Actions
+  // ── Actions ─────────────────────────────────────────────────────
+
+  // Core
   setCalling: (p: {
     isCalling: boolean;
     roomId: string | null;
@@ -55,43 +136,160 @@ export interface CallState {
     channelName?: string;
   }) => void;
   setIncomingCall: (call: IncomingCall | null) => void;
+  setCallStartTime: (time: number | null) => void;
+
+  // Streams
   setLocalStream: (stream: MediaStream | null) => void;
+  setScreenStream: (stream: MediaStream | null) => void;
   addRemoteStream: (userId: string, stream: MediaStream) => void;
   removeRemoteStream: (userId: string) => void;
+  addRemoteScreenStream: (userId: string, stream: MediaStream) => void;
+  removeRemoteScreenStream: (userId: string) => void;
+
+  // Controls
   toggleMute: () => void;
   toggleCamera: () => void;
   toggleDeafen: () => void;
+  toggleScreenShare: () => void;
+  toggleHandRaise: () => void;
+  setMuted: (v: boolean) => void;
+
+  // Layout
+  setLayout: (layout: CallLayout) => void;
+  setActivePanel: (panel: CallPanel) => void;
+  setPinnedUser: (userId: string | null) => void;
+  setMinimized: (v: boolean) => void;
+  setWhiteboardActive: (active: boolean) => void;
+  setStageMode: (active: boolean) => void;
+  addRequestToSpeak: (userId: string) => void;
+  removeRequestToSpeak: (userId: string) => void;
+  setSubRoom: (subRoomId: string | null) => void;
+  updateBreakoutRooms: (rooms: Record<string, string[]>) => void;
+  setBackgroundImage: (url: string | null) => void;
+  addTranscript: (text: string) => void;
+  setSummaryVisible: (v: boolean) => void;
+  setLowDataMode: (active: boolean) => void;
+
+  // Participants
   upsertParticipant: (p: Partial<CallParticipant> & { id: string; name: string }) => void;
   removeParticipant: (userId: string) => void;
   setParticipantMuted: (userId: string, isMuted: boolean) => void;
   setParticipantSpeaking: (userId: string, isSpeaking: boolean) => void;
+  setParticipantHandRaised: (userId: string, isRaised: boolean) => void;
+  setParticipantScreenSharing: (userId: string, isSharing: boolean) => void;
+  setParticipantCameraOn: (userId: string, isCameraOn: boolean) => void;
+
+  // Chat
+  addChatMessage: (msg: CallChatMessage) => void;
+  clearChatMessages: () => void;
+  resetUnreadChat: () => void;
+
+  // Reactions
+  addReaction: (reaction: CallReaction) => void;
+  removeReaction: (id: string) => void;
+
+  // Recording
+  setRecording: (isRecording: boolean) => void;
+  setRecordingPaused: (isPaused: boolean) => void;
+
+  // Devices
+  setSelectedAudioInput: (deviceId: string) => void;
+  setSelectedVideoInput: (deviceId: string) => void;
+  setSelectedAudioOutput: (deviceId: string) => void;
+  setAvailableDevices: (devices: MediaDeviceInfo[]) => void;
+
+  // Advanced
+  setPushToTalk: (enabled: boolean) => void;
+  setPushToTalkActive: (active: boolean) => void;
+  setNoiseSuppression: (enabled: boolean) => void;
+  setBackgroundBlur: (enabled: boolean) => void;
+
+  // Network
+  setNetworkQuality: (userId: string, quality: "excellent" | "good" | "poor" | "disconnected") => void;
+  setLocalNetworkQuality: (quality: "excellent" | "good" | "poor" | "disconnected") => void;
+
+  // Channel banners
   setActiveGroupCall: (roomId: string, info: ActiveGroupCallInfo | null) => void;
   removeActiveGroupCall: (roomId: string) => void;
+
+  // Reset
   resetCallState: () => void;
 }
 
-export const useCallStore = create<CallState>((set, get) => ({
+/* ─── Initial State ─────────────────────────────────────────────── */
+
+const initialState = {
   isCalling: false,
-  callRoomId: null,
-  callType: "audio",
+  callRoomId: null as string | null,
+  callType: "audio" as const,
   isGroupCall: false,
-  channelName: null,
-  incomingCall: null,
-  localStream: null,
-  remoteStreams: {},
+  channelName: null as string | null,
+  callStartTime: null as number | null,
+  incomingCall: null as IncomingCall | null,
+  localStream: null as MediaStream | null,
+  screenStream: null as MediaStream | null,
+  remoteStreams: {} as Record<string, MediaStream>,
+  remoteScreenStreams: {} as Record<string, MediaStream>,
   isMuted: false,
   isCameraOn: true,
   isDeafened: false,
-  participants: {},
+  isScreenSharing: false,
+  isHandRaised: false,
+  layout: "grid" as CallLayout,
+  activePanel: null as CallPanel,
+  pinnedUserId: null as string | null,
+  isMinimized: false,
+  isWhiteboardActive: false,
+  isStageMode: false,
+  requestToSpeak: new Set<string>(),
+  subRoomId: null as string | null,
+  breakoutRooms: {} as Record<string, string[]>,
+  backgroundImage: null as string | null,
+  isSummaryVisible: false,
+  lowDataMode: false,
+  participants: {} as Record<string, CallParticipant>,
   speakingUserIds: new Set<string>(),
-  activeGroupCalls: {},
+  chatMessages: [] as CallChatMessage[],
+  unreadChatCount: 0,
+  activeReactions: [] as CallReaction[],
+  isRecording: false,
+  recordingStartTime: null as number | null,
+  isPaused: false,
+  selectedAudioInput: null as string | null,
+  selectedVideoInput: null as string | null,
+  selectedAudioOutput: null as string | null,
+  availableDevices: [] as MediaDeviceInfo[],
+  pushToTalkEnabled: false,
+  pushToTalkActive: false,
+  noiseSuppressionEnabled: true,
+  backgroundBlurEnabled: false,
+  networkQuality: {} as Record<string, "excellent" | "good" | "poor" | "disconnected">,
+  localNetworkQuality: "excellent" as const,
+  activeGroupCalls: {} as Record<string, ActiveGroupCallInfo>,
+};
 
+/* ─── Store ─────────────────────────────────────────────────────── */
+
+export const useCallStore = create<CallState>((set, get) => ({
+  ...initialState,
+
+  // ── Core ──────────────────────────────────────────────────────
   setCalling: ({ isCalling, roomId, isGroupCall = false, callType = "audio", channelName = null }) =>
-    set({ isCalling, callRoomId: roomId, isGroupCall, callType, channelName }),
+    set({
+      isCalling,
+      callRoomId: roomId,
+      isGroupCall,
+      callType,
+      channelName,
+      callStartTime: isCalling ? Date.now() : null,
+    }),
 
   setIncomingCall: (call) => set({ incomingCall: call }),
+  setCallStartTime: (time) => set({ callStartTime: time }),
 
+  // ── Streams ───────────────────────────────────────────────────
   setLocalStream: (stream) => set({ localStream: stream }),
+  setScreenStream: (stream) => set({ screenStream: stream, isScreenSharing: !!stream }),
 
   addRemoteStream: (userId, stream) =>
     set((s) => ({ remoteStreams: { ...s.remoteStreams, [userId]: stream } })),
@@ -103,6 +301,17 @@ export const useCallStore = create<CallState>((set, get) => ({
       return { remoteStreams: r };
     }),
 
+  addRemoteScreenStream: (userId, stream) =>
+    set((s) => ({ remoteScreenStreams: { ...s.remoteScreenStreams, [userId]: stream } })),
+
+  removeRemoteScreenStream: (userId) =>
+    set((s) => {
+      const r = { ...s.remoteScreenStreams };
+      delete r[userId];
+      return { remoteScreenStreams: r };
+    }),
+
+  // ── Controls ──────────────────────────────────────────────────
   toggleMute: () =>
     set((s) => {
       const next = !s.isMuted;
@@ -127,9 +336,56 @@ export const useCallStore = create<CallState>((set, get) => ({
       return { isDeafened: next };
     }),
 
+  toggleScreenShare: () => set((s) => ({ isScreenSharing: !s.isScreenSharing })),
+  toggleHandRaise: () => set((s) => ({ isHandRaised: !s.isHandRaised })),
+  setMuted: (v) => {
+    const s = get();
+    s.localStream?.getAudioTracks().forEach((t) => { t.enabled = !v; });
+    set({ isMuted: v });
+  },
+
+  // ── Layout ────────────────────────────────────────────────────
+  setLayout: (layout) => set({ layout }),
+  setActivePanel: (panel) =>
+    set((s) => ({
+      activePanel: s.activePanel === panel ? null : panel,
+      unreadChatCount: panel === "chat" ? 0 : s.unreadChatCount,
+    })),
+  setPinnedUser: (userId) => set({ pinnedUserId: userId }),
+  setMinimized: (v) => set({ isMinimized: v }),
+  setWhiteboardActive: (active) => set({ isWhiteboardActive: active }),
+  setStageMode: (active) => set({ isStageMode: active }),
+  addRequestToSpeak: (userId) => set((s) => {
+    const next = new Set(s.requestToSpeak);
+    next.add(userId);
+    return { requestToSpeak: next };
+  }),
+  removeRequestToSpeak: (userId) => set((s) => {
+    const next = new Set(s.requestToSpeak);
+    next.delete(userId);
+    return { requestToSpeak: next };
+  }),
+  setSubRoom: (subRoomId) => set({ subRoomId }),
+  updateBreakoutRooms: (rooms) => set({ breakoutRooms: rooms }),
+  setBackgroundImage: (url) => set({ backgroundImage: url }),
+  addTranscript: (text) => set((s) => ({ chatMessages: [...s.chatMessages, { id: `t_${Date.now()}`, userId: "system", userName: "System", content: text, timestamp: Date.now(), type: "system" }] })), 
+  setSummaryVisible: (v) => set({ isSummaryVisible: v }),
+  setLowDataMode: (active) => set({ 
+    lowDataMode: active,
+    isCameraOn: active ? false : get().isCameraOn 
+  }),
+
+  // ── Participants ──────────────────────────────────────────────
   upsertParticipant: (p) =>
     set((s) => {
-      const existing = s.participants[p.id] || { isMuted: false, isSpeaking: false };
+      const existing = s.participants[p.id] || {
+        isMuted: false,
+        isCameraOn: true,
+        isSpeaking: false,
+        isHandRaised: false,
+        isScreenSharing: false,
+        networkQuality: "excellent" as const,
+      };
       return {
         participants: {
           ...s.participants,
@@ -153,7 +409,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       },
     })),
 
-  setParticipantSpeaking: (userId, isSpeaking) => {
+  setParticipantSpeaking: (userId, isSpeaking) =>
     set((s) => {
       const next = new Set(s.speakingUserIds);
       isSpeaking ? next.add(userId) : next.delete(userId);
@@ -164,9 +420,85 @@ export const useCallStore = create<CallState>((set, get) => ({
           [userId]: { ...s.participants[userId], isSpeaking },
         },
       };
-    });
-  },
+    }),
 
+  setParticipantHandRaised: (userId, isRaised) =>
+    set((s) => ({
+      participants: {
+        ...s.participants,
+        [userId]: { ...s.participants[userId], isHandRaised: isRaised },
+      },
+    })),
+
+  setParticipantScreenSharing: (userId, isSharing) =>
+    set((s) => ({
+      participants: {
+        ...s.participants,
+        [userId]: { ...s.participants[userId], isScreenSharing: isSharing },
+      },
+    })),
+
+  setParticipantCameraOn: (userId, isCameraOn) =>
+    set((s) => ({
+      participants: {
+        ...s.participants,
+        [userId]: { ...s.participants[userId], isCameraOn },
+      },
+    })),
+
+  // ── Chat ──────────────────────────────────────────────────────
+  addChatMessage: (msg) =>
+    set((s) => ({
+      chatMessages: [...s.chatMessages, msg],
+      unreadChatCount: s.activePanel === "chat" ? s.unreadChatCount : s.unreadChatCount + 1,
+    })),
+  clearChatMessages: () => set({ chatMessages: [], unreadChatCount: 0 }),
+  resetUnreadChat: () => set({ unreadChatCount: 0 }),
+
+  // ── Reactions ─────────────────────────────────────────────────
+  addReaction: (reaction) =>
+    set((s) => ({ activeReactions: [...s.activeReactions, reaction] })),
+  removeReaction: (id) =>
+    set((s) => ({ activeReactions: s.activeReactions.filter((r) => r.id !== id) })),
+
+  // ── Recording ─────────────────────────────────────────────────
+  setRecording: (isRecording) =>
+    set({
+      isRecording,
+      recordingStartTime: isRecording ? Date.now() : null,
+      isPaused: false,
+    }),
+  setRecordingPaused: (isPaused) => set({ isPaused }),
+
+  // ── Devices ───────────────────────────────────────────────────
+  setSelectedAudioInput: (deviceId) => set({ selectedAudioInput: deviceId }),
+  setSelectedVideoInput: (deviceId) => set({ selectedVideoInput: deviceId }),
+  setSelectedAudioOutput: (deviceId) => set({ selectedAudioOutput: deviceId }),
+  setAvailableDevices: (devices) => set({ availableDevices: devices }),
+
+  // ── Advanced ──────────────────────────────────────────────────
+  setPushToTalk: (enabled) => set({ pushToTalkEnabled: enabled }),
+  setPushToTalkActive: (active) => {
+    const s = get();
+    if (s.pushToTalkEnabled) {
+      s.localStream?.getAudioTracks().forEach((t) => { t.enabled = active; });
+      set({ pushToTalkActive: active, isMuted: !active });
+    }
+  },
+  setNoiseSuppression: (enabled) => set({ noiseSuppressionEnabled: enabled }),
+  setBackgroundBlur: (enabled) => set({ backgroundBlurEnabled: enabled }),
+
+  // ── Network ───────────────────────────────────────────────────
+  setNetworkQuality: (userId, quality) =>
+    set((s) => ({
+      networkQuality: { ...s.networkQuality, [userId]: quality },
+      participants: s.participants[userId]
+        ? { ...s.participants, [userId]: { ...s.participants[userId], networkQuality: quality } }
+        : s.participants,
+    })),
+  setLocalNetworkQuality: (quality) => set({ localNetworkQuality: quality }),
+
+  // ── Channel banners ──────────────────────────────────────────
   setActiveGroupCall: (roomId, info) =>
     set((s) => {
       const calls = { ...s.activeGroupCalls };
@@ -174,7 +506,6 @@ export const useCallStore = create<CallState>((set, get) => ({
       else calls[roomId] = info;
       return { activeGroupCalls: calls };
     }),
-
   removeActiveGroupCall: (roomId) =>
     set((s) => {
       const calls = { ...s.activeGroupCalls };
@@ -182,20 +513,11 @@ export const useCallStore = create<CallState>((set, get) => ({
       return { activeGroupCalls: calls };
     }),
 
+  // ── Reset ─────────────────────────────────────────────────────
   resetCallState: () =>
     set({
-      isCalling: false,
-      callRoomId: null,
-      callType: "audio",
-      isGroupCall: false,
-      channelName: null,
-      incomingCall: null,
-      localStream: null,
-      remoteStreams: {},
-      isMuted: false,
-      isCameraOn: true,
-      isDeafened: false,
-      participants: {},
-      speakingUserIds: new Set<string>(),
+      ...initialState,
+      activeGroupCalls: get().activeGroupCalls, // preserve banners
+      availableDevices: get().availableDevices,  // preserve devices
     }),
 }));
