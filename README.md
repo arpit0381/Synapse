@@ -17,7 +17,7 @@ This project is divided into two main parts:
 
 For detailed documentation, please see the `/docs` directory.//////
 //////
-## Getting Started
+## Getting Started......
 
 ### Prerequisites
 - Node.js 18+
