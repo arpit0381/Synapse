@@ -8,6 +8,7 @@ import { CommandPalette } from "@/components/layout/CommandPalette";
 import { MentionToastListener } from "@/components/layout/MentionToastListener";
 import BottomNav from "@/components/layout/BottomNav";
 import { Toaster } from "react-hot-toast";
+import { VoyageLoader } from "@/components/ui/VoyageLoader";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -17,11 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (!mounted) {
-    return (
-      <div className="flex h-screen bg-background items-center justify-center">
-        {/* Render a simple fallback during SSR to avoid hydration mismatch */}
-      </div>
-    );
+    return <VoyageLoader />;
   }
 
   return (

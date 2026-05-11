@@ -107,14 +107,21 @@ export function AppInitializer() {
       socket.emit("join_workspace", { workspaceId: currentWorkspace!.id, userId: user!.id });
     };
 
+    const onDisconnect = () => {
+      // Clear local presence on disconnect to avoid stale states
+      useAppStore.setState({ onlineUserIds: [], presenceMap: {} });
+    };
+
     if (socket.connected) onConnect();
     socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
 
     // Online/Offline events
     socket.on("user_online", ({ userId }: { userId: string }) => setUserOnline(userId));
     socket.on("user_offline", ({ userId }: { userId: string }) => setUserOffline(userId));
     socket.on("online_users", ({ users }: { users: string[] }) => {
-      users.forEach(setUserOnline);
+      // Replace entire list to avoid ghost active users
+      useAppStore.setState({ onlineUserIds: users });
     });
 
     // Presence events

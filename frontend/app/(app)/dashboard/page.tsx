@@ -13,10 +13,11 @@ import { cn, getGreeting, getGreetingEmoji, stringToColor, formatRelativeTime, P
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
+import { Skeleton, StrawHatLoader } from "@/components/ui/StrawHatSkeleton";
 
 // ── Skeleton component ────────────────────────────────────────────
 function StatSkeleton() {
-  return <div className="skeleton h-32 rounded-3xl" />;
+  return <Skeleton className="h-32 rounded-3xl" />;
 }
 
 // ── Analytics Card ────────────────────────────────────────────────
@@ -182,7 +183,12 @@ export default function DashboardPage() {
             </div>
             
             <div className="grid gap-3">
-              {tasksLoading ? Array(3).fill(0).map((_, i) => <div key={i} className="skeleton h-20 rounded-3xl" />) : 
+              {tasksLoading ? (
+                <>
+                  <StrawHatLoader label="Preparing Bounties..." className="py-4" />
+                  {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-20 rounded-3xl" />)}
+                </>
+              ) : 
                 tasks.length > 0 ? tasks.slice(0, 4).map((task: any) => {
                   const pc = PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.medium;
                   return (
@@ -239,7 +245,12 @@ export default function DashboardPage() {
               </div>
               <div className="bg-surface/30 border border-border/50 rounded-[32px] overflow-hidden">
                 <div className="divide-y divide-border/40">
-                  {activityLoading ? Array(5).fill(0).map((_, i) => <div key={i} className="skeleton h-16 w-full" />) : 
+                  {activityLoading ? (
+                    <>
+                      <StrawHatLoader label="Checking Logs..." className="py-6" />
+                      {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+                    </>
+                  ) : 
                     activities.map((act: any) => (
                       <div key={act.id} className="flex items-center gap-4 p-5 hover:bg-muted/30 transition-colors">
                         <div className="w-10 h-10 rounded-full border-2 border-border/40 overflow-hidden flex-shrink-0" style={{ backgroundColor: stringToColor(act.user?.full_name || "User") }}>

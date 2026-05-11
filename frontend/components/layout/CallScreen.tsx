@@ -117,7 +117,7 @@ function Tile({
           </span>
         )}
         <span className="text-white text-xs font-semibold truncate">
-          {name}{isLocal ? " (you)" : ""}
+          {name}{isLocal ? " (Captain)" : ""}
         </span>
         {isSpeaking && !isMuted && (
           <span className="ml-auto flex gap-0.5 items-end" style={{ height: 12 }}>
@@ -302,7 +302,7 @@ export function CallScreen({ onEndCall }: { onEndCall: () => void }) {
             </div>
             <div className="flex items-center gap-2 text-sm" style={{ color: "#949ba4" }}>
               <Users className="w-4 h-4" />
-              <span>{totalTiles} {totalTiles === 1 ? "person" : "people"}</span>
+              <span>{totalTiles} Nakama</span>
             </div>
           </div>
 
@@ -366,7 +366,7 @@ export function CallScreen({ onEndCall }: { onEndCall: () => void }) {
             <Btn
               onClick={store.toggleMute}
               active={store.isMuted}
-              label={store.isMuted ? "Unmute" : "Mute"}
+              label={store.isMuted ? "Speak (Unmute)" : "Silence (Mute)"}
             >
               {store.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </Btn>
@@ -375,7 +375,7 @@ export function CallScreen({ onEndCall }: { onEndCall: () => void }) {
               <Btn
                 onClick={store.toggleCamera}
                 active={!store.isCameraOn}
-                label={store.isCameraOn ? "Stop Video" : "Start Video"}
+                label={store.isCameraOn ? "Hide (Stop Video)" : "Reveal (Start Video)"}
               >
                 {store.isCameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
               </Btn>
@@ -384,12 +384,12 @@ export function CallScreen({ onEndCall }: { onEndCall: () => void }) {
             <Btn
               onClick={store.toggleDeafen}
               active={store.isDeafened}
-              label={store.isDeafened ? "Undeafen" : "Deafen"}
+              label={store.isDeafened ? "Listen to Sea" : "Close Ears"}
             >
               {store.isDeafened ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </Btn>
 
-            <Btn onClick={onEndCall} danger label="End Call" large>
+            <Btn onClick={onEndCall} danger label="Retreat (End Call)" large>
               <PhoneOff className="w-6 h-6" />
             </Btn>
           </div>

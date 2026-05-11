@@ -61,7 +61,7 @@ export function PollsPanel() {
     >
       <div className="p-4 border-b border-white/5 flex items-center justify-between">
         <h3 className="text-white font-semibold flex items-center gap-2">
-          <BarChart2 className="w-4 h-4 text-accent" /> Polls
+          <BarChart2 className="w-4 h-4 text-accent" /> Crew Votes (Polls)
         </h3>
         <button
           onClick={() => setIsCreating(true)}
@@ -83,7 +83,7 @@ export function PollsPanel() {
               <input
                 value={newQuestion}
                 onChange={e => setNewQuestion(e.target.value)}
-                placeholder="Ask a question..."
+                placeholder="Propose a Council Query..."
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent"
               />
               <div className="space-y-2">
@@ -96,7 +96,7 @@ export function PollsPanel() {
                       next[i] = e.target.value;
                       setNewOptions(next);
                     }}
-                    placeholder={`Option ${i + 1}`}
+                    placeholder={`Choice ${i + 1}`}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-accent"
                   />
                 ))}
@@ -112,7 +112,7 @@ export function PollsPanel() {
                   onClick={createPoll}
                   className="flex-1 py-2 rounded-xl bg-accent text-xs font-bold text-white shadow-lg shadow-accent/20"
                 >
-                  Launch Poll
+                  Start the Vote
                 </button>
               </div>
             </motion.div>
@@ -124,8 +124,8 @@ export function PollsPanel() {
             <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center mb-4">
               <BarChart2 className="w-8 h-8 text-white/20" />
             </div>
-            <p className="text-white/40 text-sm">No polls active yet.</p>
-            <p className="text-white/20 text-xs mt-1">Start one to engage the group.</p>
+            <p className="text-white/40 text-sm">The crew is silent. No votes yet.</p>
+            <p className="text-white/20 text-xs mt-1">Start a council to engage your nakama.</p>
           </div>
         )}
 

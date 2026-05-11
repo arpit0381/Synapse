@@ -169,11 +169,11 @@ export function Whiteboard() {
 
       {/* Toolbar */}
       <div className="absolute top-4 left-4 flex flex-col gap-2 p-2 bg-[#111214]/80 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl">
-        <ToolBtn active={tool === "pencil"} onClick={() => setTool("pencil")} icon={Pencil} label="Pencil" />
-        <ToolBtn active={tool === "eraser"} onClick={() => setTool("eraser")} icon={Eraser} label="Eraser" />
+        <ToolBtn active={tool === "pencil"} onClick={() => setTool("pencil")} icon={Pencil} label="Sketch (Pencil)" />
+        <ToolBtn active={tool === "eraser"} onClick={() => setTool("eraser")} icon={Eraser} label="Remove Mark (Eraser)" />
         <div className="w-full h-px bg-white/10 my-1" />
-        <ToolBtn onClick={handleClear} icon={Trash2} label="Clear All" danger />
-        <ToolBtn onClick={download} icon={Download} label="Export" />
+        <ToolBtn onClick={handleClear} icon={Trash2} label="Wipe Tactical Map" danger />
+        <ToolBtn onClick={download} icon={Download} label="Save Strategy (Export)" />
       </div>
 
       {/* Color & Size Picker */}

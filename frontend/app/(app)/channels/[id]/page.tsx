@@ -20,6 +20,8 @@ import { getSocket } from "@/lib/socket";
 import { cn, getInitials, stringToColor, formatTime, getChatDateLabel } from "@/lib/utils";
 import { CallBanner } from "@/components/layout/CallBanner";
 import { DocumentEmbed, SheetEmbed, TaskEmbed } from "@/components/chat/MessageEmbeds";
+import { WantedPoster } from "@/components/ui/WantedPoster";
+import { StrawHatSkeleton } from "@/components/ui/StrawHatSkeleton";
 
 // ── Types ─────────────────────────────────────────────────────────────
 interface DbMessage {
@@ -125,17 +127,34 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact, onReply, onBookmark
       </div>
 
       <div className={cn("flex gap-3.5", isOwn && !isAI ? "flex-row-reverse text-right" : "flex-row")}>
-        <Avatar name={isAI ? "Synapse AI" : msg.userName} url={isAI ? undefined : msg.avatarUrl} />
+        <div className="relative group/avatar">
+          <Avatar name={isAI ? "Synapse AI" : msg.userName} url={isAI ? undefined : msg.avatarUrl} />
+          {!isAI && !isSystem && (
+            <div className={cn(
+              "absolute bottom-full z-[100] mb-2 transition-all duration-300 pointer-events-none opacity-0 scale-90 group-hover/avatar:opacity-100 group-hover/avatar:scale-100",
+              isOwn ? "right-0" : "left-0"
+            )}>
+              <WantedPoster name={msg.userName} avatarUrl={msg.avatarUrl} />
+            </div>
+          )}
+        </div>
         <div className={cn("flex-1 min-w-0 flex flex-col", isOwn && !isAI ? "items-end" : "items-start")}>
           <div className="flex items-baseline gap-2 mb-0.5">
-            <span className="font-semibold text-[14px] text-foreground hover:underline cursor-pointer flex items-center gap-1.5">
+            <span className="font-semibold text-[14px] text-foreground hover:underline cursor-pointer flex items-center gap-1.5 group/name relative">
               {isAI ? (
                 <>
                   <Bot className="w-3.5 h-3.5 text-accent" />
                   Synapse AI
                   <span className="bg-accent/10 text-accent text-[9px] uppercase font-black px-1.5 py-0.5 rounded tracking-tighter">AI</span>
                 </>
-              ) : msg.userName}
+              ) : (
+                <>
+                  {msg.userName}
+                  <div className="absolute bottom-full left-0 z-[100] mb-2 transition-all duration-300 pointer-events-none opacity-0 scale-90 group-hover/name:opacity-100 group-hover/name:scale-100">
+                    <WantedPoster name={msg.userName} avatarUrl={msg.avatarUrl} />
+                  </div>
+                </>
+              )}
             </span>
             <span className="text-[11px] font-medium text-muted-foreground/60">{formatTime(msg.timestamp)}</span>
             {msg.isPinned && <Pin className="w-3 h-3 text-accent" />}
@@ -785,7 +804,17 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="flex h-full w-full relative">
-      <div className="flex flex-col flex-1 h-full bg-background relative min-w-0">
+      <div 
+        className="flex flex-col flex-1 h-full relative min-w-0"
+        style={{
+          backgroundImage: `url('/onepiece-bg.png')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      >
+        <div className="absolute inset-0 bg-background/85 backdrop-blur-[2px] pointer-events-none z-0" />
+        <div className="relative z-10 flex flex-col h-full overflow-hidden">
         {/* ── TopBar ── */}
         <div className="flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-border/40 glass-strong flex-shrink-0 z-20 sticky top-0 h-16 md:h-20">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -841,13 +870,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               </motion.div>
             )}
           </AnimatePresence>
-          {isLoading && (
-            <div className="flex flex-col gap-4 p-6">
-              <div className="skeleton h-12 w-3/4 rounded-2xl opacity-50" />
-              <div className="skeleton h-12 w-1/2 rounded-2xl opacity-50" />
-              <div className="skeleton h-24 w-2/3 rounded-2xl opacity-50" />
-            </div>
-          )}
+          {isLoading && <StrawHatSkeleton />}
 
           {!isLoading && displayMessages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center px-4 pb-10">
@@ -893,7 +916,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                   {[0, 1, 2].map(i => <div key={i} className="typing-dot" style={{ animationDelay: `${i * 0.2}s` }} />)}
                 </div>
                 <span className="text-xs text-muted-foreground font-medium">
-                  <strong className="text-foreground">{typingNames.join(", ")}</strong> {typingNames.length === 1 ? "is" : "are"} typing…
+                  <strong className="text-foreground">{typingNames.join(", ")}</strong> {typingNames.length === 1 ? "is" : "are"} preparing a Den Den Mushi…
                 </span>
               </motion.div>
             )}
@@ -910,7 +933,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
             <div className="flex items-center justify-between bg-surface border border-border rounded-t-2xl px-4 py-2.5 mx-1 -mb-1 shadow-sm">
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="text-[11px] font-bold text-accent flex items-center gap-1 uppercase tracking-wider">
-                  <Reply className="w-3 h-3" /> Replying to {replyTo.senderName}
+                  <Reply className="w-3 h-3" /> Nakama Reply to {replyTo.senderName}
                 </span>
                 <span className="text-[13px] text-muted-foreground truncate mt-0.5 font-medium">{replyTo.content}</span>
               </div>
@@ -944,7 +967,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               <button
                 onClick={() => setShowSlashMenu(!showSlashMenu)}
                 className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center hover:bg-accent hover:text-white transition-colors"
-                title="Apps Hub Options (/)"
+                title="Treasure Map (/)"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -956,7 +979,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               onChange={handleInput}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={`Message #${channel.name} (type '/' for apps)`}
+              placeholder={`Send a Den Den Mushi to #${channel.name} (type '/' for treasures)`}
               rows={1}
               className="flex-1 bg-transparent text-[14.5px] text-foreground placeholder:text-muted-foreground py-3.5 px-2 resize-none outline-none focus:outline-none max-h-[200px] leading-relaxed"
               style={{ minHeight: "48px" }}
@@ -1156,6 +1179,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
           <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
         </div>
       </div>
+    </div>
 
       {/* ── Right Panel (Members / Search) ── */}
       <AnimatePresence>
@@ -1168,7 +1192,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
               <h3 className="font-semibold text-[15px] flex items-center gap-2">
-                {rightPanel === "members" ? <><Users className="w-4 h-4 text-accent" /> Members</> : rightPanel === "pins" ? <><Pin className="w-4 h-4 text-accent" /> Pinned Messages</> : <><Search className="w-4 h-4 text-accent" /> Search Channel</>}
+                {rightPanel === "members" ? <><Users className="w-4 h-4 text-accent" /> Nakama (Members)</> : rightPanel === "pins" ? <><Pin className="w-4 h-4 text-accent" /> Ancient Poses (Pins)</> : <><Search className="w-4 h-4 text-accent" /> Scout Island (Search)</>}
               </h3>
               <button onClick={() => setRightPanel(null)} className="p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><X className="w-4 h-4" /></button>
             </div>
@@ -1180,7 +1204,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                     const isOnline = onlineUserIds.includes(member.id);
                     const currentStatus = presenceMap[member.id]?.status || (isOnline ? "online" : member.status) || "offline";
                     return (
-                      <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors cursor-pointer border border-transparent hover:border-border/50">
+                      <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors cursor-pointer border border-transparent hover:border-border/50 group/member relative">
                         <div className="relative">
                           <Avatar name={member.full_name || member.username} url={member.avatar_url} />
                           <div className={cn("absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface", 
@@ -1192,6 +1216,11 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                         <div className="flex flex-col">
                           <span className="font-semibold text-sm">{member.full_name || member.username}</span>
                           <span className="text-xs text-muted-foreground capitalize">{currentStatus}</span>
+                        </div>
+                        
+                        {/* Wanted Poster Tooltip */}
+                        <div className="absolute right-full top-0 mr-4 z-[100] transition-all duration-300 pointer-events-none opacity-0 scale-90 group-hover/member:opacity-100 group-hover/member:scale-100">
+                          <WantedPoster name={member.full_name || member.username} avatarUrl={member.avatar_url} />
                         </div>
                       </div>
                     );
@@ -1224,7 +1253,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                   {!searchQuery.trim() ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-50 pb-20">
                       <Search className="w-12 h-12 mb-3" />
-                      <span className="text-sm">Type to search in #{channel.name}</span>
+                      <span className="text-sm">Scout messages in #${channel.name}</span>
                     </div>
                   ) : searchResults.length === 0 ? (
                     <div className="text-center text-muted-foreground text-sm py-10">No messages found.</div>
@@ -1285,7 +1314,7 @@ function CallHeaderBanner({ channelId, channelName }: { channelId: string; chann
       )}
     >
       <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-      {isInThisCall ? "CONNECTED" : "JOIN CALL"}
+      {isInThisCall ? "CONNECTED" : "SET SAIL (Join Call)"}
       <span className="opacity-60 font-medium ml-0.5">{activeCall.participantCount}</span>
     </motion.button>
   );
@@ -1315,8 +1344,8 @@ function PinnedMessagesPanel({ channelId }: { channelId: string }) {
       ) : pins.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
           <Pin className="w-8 h-8 mb-2 opacity-20" />
-          <p className="text-sm font-medium">No pinned messages</p>
-          <p className="text-xs mt-1 opacity-60">Pin important messages for easy access</p>
+          <p className="text-sm font-medium">No Ancient Poses</p>
+          <p className="text-xs mt-1 opacity-60">Pin important memories for easy access</p>
         </div>
       ) : (
         pins.map((pin: any) => {

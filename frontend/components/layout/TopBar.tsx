@@ -18,17 +18,17 @@ const THEME_ICONS: Record<Theme, React.ReactNode> = {
 };
 
 const PATH_LABELS: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/tasks": "Tasks",
-  "/files": "Files",
-  "/ai-assistant": "AI Assistant",
-  "/search": "Search",
-  "/analytics": "Analytics",
-  "/focus-mode": "Focus Mode",
-  "/settings/profile": "Profile Settings",
-  "/settings/workspace": "Workspace Settings",
-  "/settings/notifications": "Notifications",
-  "/settings/appearance": "Appearance",
+  "/dashboard": "GRAND LINE (Dashboard)",
+  "/tasks": "BOUNTIES (Tasks)",
+  "/files": "LOG POSES (Files)",
+  "/ai-assistant": "OHARA SCHOLAR (AI)",
+  "/search": "SCOUT (Search)",
+  "/analytics": "WORLD ECONOMY (Analytics)",
+  "/focus-mode": "CONQUEROR SPIRIT (Focus)",
+  "/settings/profile": "CAPTAIN LOG (Profile)",
+  "/settings/workspace": "FLEET COMMAND (Workspace)",
+  "/settings/notifications": "DEN DEN SIGNALS (Alerts)",
+  "/settings/appearance": "VISUAL HAKI (Appearance)",
 };
 
 export default function TopBar() {
@@ -42,8 +42,8 @@ export default function TopBar() {
   for (const [key, label] of Object.entries(PATH_LABELS)) {
     if (pathname === key || pathname.startsWith(key + "/")) { pageTitle = label; break; }
   }
-  if (pathname.startsWith("/channels/")) pageTitle = "# Channel";
-  if (pathname.startsWith("/dm/")) pageTitle = "Direct Message";
+  if (pathname.startsWith("/channels/")) pageTitle = "# Island (Channel)";
+  if (pathname.startsWith("/dm/")) pageTitle = "Den Den Mushi (DM)";
 
   function cycleTheme() {
     const ids = themes.map((t) => t.id);
@@ -77,7 +77,7 @@ export default function TopBar() {
           className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-muted/50 border border-transparent hover:border-border/60 text-muted-foreground hover:text-foreground transition-all duration-200 text-xs font-medium group"
         >
           <Search className="w-4 h-4 transition-transform group-hover:scale-110" />
-          <span className="hidden md:inline">Quick Search</span>
+          <span className="hidden md:inline">Island Scout</span>
           <kbd className="hidden lg:inline text-[10px] bg-surface rounded-md px-1.5 py-0.5 border border-border/40 opacity-60">⌘K</kbd>
         </button>
 
@@ -93,7 +93,7 @@ export default function TopBar() {
               {THEME_ICONS[theme]}
             </button>
             <div className="absolute right-0 top-[calc(100%+8px)] hidden group-hover:block z-50 bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl py-2 min-w-[160px] animate-in fade-in slide-in-from-top-2">
-              <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Select Theme</div>
+              <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Haki Aura (Theme)</div>
               {themes.map((t) => (
                 <button 
                   key={t.id} 
@@ -117,6 +117,20 @@ export default function TopBar() {
               <Settings2 className="w-4.5 h-4.5" />
             </button>
           </Link>
+
+          {/* Personal Bounty Badge */}
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#e9d5a1]/10 border border-[#b89a67]/30 text-[#b89a67] shadow-inner cursor-default group/bounty relative">
+             <span className="text-[10px] font-black tracking-widest uppercase opacity-60">Bounty</span>
+             <span className="text-[13px] font-black font-serif flex items-center gap-0.5">
+               <span className="text-sm">฿</span>
+               { (Math.abs((displayUser.name || "User").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)) * 100000).toLocaleString() }
+             </span>
+             
+             {/* Simple Tooltip */}
+             <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 bg-[#3d2b1f] text-[#e9d5a1] text-[10px] font-bold rounded-lg opacity-0 group-hover/bounty:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-[#b89a67]/20">
+                Your reputation in the New World
+             </div>
+          </div>
         </div>
 
         {/* User avatar */}
@@ -128,7 +142,7 @@ export default function TopBar() {
             </div>
             <div className="hidden lg:flex flex-col items-start leading-none pr-1">
               <span className="text-[11px] font-bold text-foreground truncate max-w-[80px]">{displayUser.name.split(" ")[0]}</span>
-              <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">Profile</span>
+              <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">Captain</span>
             </div>
           </button>
         </Link>

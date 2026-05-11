@@ -27,20 +27,20 @@ const STATUS_COLORS = {
 };
 
 const RAIL_ITEMS = [
-  { icon: LayoutDashboard, label: "Home", href: "/dashboard", roles: ["owner", "admin", "member", "guest"] },
-  { icon: CheckSquare, label: "Planner", href: "/tasks", roles: ["owner", "admin", "member"] },
-  { icon: Bot, label: "AI", href: "/ai-assistant", roles: ["owner", "admin", "member"] },
-  { icon: Users, label: "Teams", href: "/teams", roles: ["owner", "admin", "member"] },
-  { icon: LayoutGrid, label: "Apps Hub", href: "/apps", roles: ["owner", "admin", "member"] },
-  { icon: FolderOpen, label: "Files", href: "/files", roles: ["owner", "admin", "member"] },
-  { icon: BarChart3, label: "Analytics", href: "/analytics", roles: ["owner", "admin"] },
+  { icon: LayoutDashboard, label: "GRAND LINE", sub: "Home", href: "/dashboard", roles: ["owner", "admin", "member", "guest"] },
+  { icon: CheckSquare, label: "QUESTS", sub: "Planner", href: "/tasks", roles: ["owner", "admin", "member"] },
+  { icon: Bot, label: "OHARA", sub: "AI Library", href: "/ai-assistant", roles: ["owner", "admin", "member"] },
+  { icon: Users, label: "CREWS", sub: "Teams", href: "/teams", roles: ["owner", "admin", "member"] },
+  { icon: LayoutGrid, label: "TREASURE", sub: "Apps Hub", href: "/apps", roles: ["owner", "admin", "member"] },
+  { icon: FolderOpen, label: "LOG POSES", sub: "Files", href: "/files", roles: ["owner", "admin", "member"] },
+  { icon: BarChart3, label: "BOUNTY", sub: "Analytics", href: "/analytics", roles: ["owner", "admin"] },
 ];
 
 const CONTEXT_MENU = [
-  { icon: Inbox, label: "Inbox", href: "/inbox" },
-  { icon: MessageCircle, label: "Replies", href: "/replies" },
-  { icon: CheckSquare, label: "My Tasks", href: "/tasks" },
-  { icon: MoreHorizontal, label: "More", href: "/more" },
+  { icon: Inbox, label: "DEN DEN (Inbox)", href: "/inbox" },
+  { icon: MessageCircle, label: "NAKAMA (Replies)", href: "/replies" },
+  { icon: CheckSquare, label: "MY BOUNTIES (Tasks)", href: "/tasks" },
+  { icon: MoreHorizontal, label: "LOGS (More)", href: "/more" },
 ];
 
 // ── Tooltip for Rail Items ──
@@ -249,9 +249,9 @@ export default function Sidebar() {
         )}
 
         {/* ── Icon Rail (Primary Nav) ── */}
-        <div className="w-[64px] md:w-[76px] bg-[#4B39EF] dark:bg-[#3B28CC] border-r border-black/10 flex-shrink-0 flex flex-col items-center py-4 z-50 shadow-xl relative">
+        <div className="w-[72px] md:w-[84px] bg-[#4B39EF] dark:bg-[#3B28CC] border-r border-black/10 flex-shrink-0 flex flex-col items-center py-4 z-50 shadow-xl relative">
           {/* Workspace Button */}
-          <RailTooltip label="Switch Workspace">
+          <RailTooltip label="Change Fleets (Workspaces)">
             <button
               onClick={() => setWorkspaceSwitcherOpen(true)}
               className="w-10 h-10 md:w-12 md:h-12 rounded-[12px] md:rounded-[14px] bg-white text-[#4B39EF] flex items-center justify-center shadow-lg hover:scale-105 hover:rounded-[10px] transition-all duration-300 btn-press group relative mb-6"
@@ -269,23 +269,28 @@ export default function Sidebar() {
               .map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
-                  <RailTooltip key={item.href} label={item.label}>
+                  <RailTooltip key={item.href} label={`${item.label} (${item.sub})`}>
                     <Link href={item.href} onClick={() => setSidebarOpen(false)} className="w-full flex flex-col items-center group/rail">
                       <div className="relative flex flex-col items-center py-1.5 md:py-2 w-full">
                         {/* Active indicator line */}
                         {isActive && (
                           <motion.div layoutId="rail-indicator" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 md:h-8 bg-white rounded-r-full" />
                         )}
-
+ 
                         <div className={cn(
-                          "w-[40px] h-[40px] md:w-[46px] md:h-[46px] rounded-xl md:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 group-hover/rail:bg-white/10",
+                          "w-[42px] h-[42px] md:w-[48px] md:h-[48px] rounded-xl md:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 group-hover/rail:bg-white/10",
                           isActive ? "bg-white/20 text-white" : "text-white/70"
                         )}>
                           <item.icon className={cn("w-5 h-5 md:w-6 md:h-6 transition-transform duration-200", !isActive && "group-hover/rail:scale-110")} />
                         </div>
-                        <span className={cn("text-[8px] md:text-[10px] font-medium mt-1 tracking-wide", isActive ? "text-white" : "text-white/70")}>
-                          {item.label}
-                        </span>
+                        <div className="flex flex-col items-center mt-1.5 px-1">
+                          <span className={cn("text-[7.5px] md:text-[9.5px] font-black tracking-tight text-center leading-none uppercase", isActive ? "text-white" : "text-white/80")}>
+                            {item.label}
+                          </span>
+                          <span className={cn("text-[6px] md:text-[7.5px] font-bold mt-0.5 opacity-60 text-center leading-none uppercase", isActive ? "text-white" : "text-white/70")}>
+                            ({item.sub})
+                          </span>
+                        </div>
                       </div>
                     </Link>
                   </RailTooltip>
@@ -298,7 +303,7 @@ export default function Sidebar() {
           {/* Bottom Rail Section */}
           <div className="flex flex-col items-center gap-4 w-full pb-2">
             {displayUser && (
-              <RailTooltip label="Profile Settings">
+              <RailTooltip label="Captain Logs (Profile)">
                 <Link href="/settings/profile" onClick={() => setSidebarOpen(false)} className="relative group/profile btn-press">
                   <div className="w-9 h-9 md:w-11 md:h-11 rounded-full p-0.5 bg-gradient-to-br from-white/30 to-white/10 group-hover/profile:from-white group-hover/profile:to-white/50 transition-all duration-300">
                     <div className="w-full h-full rounded-full bg-surface flex items-center justify-center overflow-hidden border-[1.5px] border-[#4B39EF] text-white font-bold text-[10px] md:text-xs" style={{ backgroundColor: displayUser.avatar_url ? 'transparent' : stringToColor(displayUser.name) }}>
@@ -326,7 +331,7 @@ export default function Sidebar() {
             {/* Header Context */}
             <div className="px-5 py-5 border-b border-border/40 flex-shrink-0 flex items-center justify-between">
               <h1 className="font-display font-bold text-lg text-foreground tracking-tight truncate pr-2">
-                {currentWorkspace?.name || "Workspace"}
+                {currentWorkspace?.name ? `${currentWorkspace.name} Fleet` : "New Fleet"}
               </h1>
               <div className="flex gap-1.5">
                 <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><Search className="w-4 h-4" /></button>
@@ -359,7 +364,7 @@ export default function Sidebar() {
               </div>
 
               {/* Channels */}
-              <SidebarSection title="Channels" onAdd={() => setCreateChannelOpen(true)}>
+              <SidebarSection title="ISLANDS (Channels)" onAdd={() => setCreateChannelOpen(true)}>
                 {publicChannels.map((ch) => {
                   const isActive = pathname.includes(ch.id);
                   const activeCall = callStore.activeGroupCalls[ch.id];
@@ -389,13 +394,14 @@ export default function Sidebar() {
                   >
                     <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
                     Create a channel
+                    Explore New Island
                   </button>
                 )}
               </SidebarSection>
 
               {/* Private Channels */}
               {privateChannels.length > 0 && (
-                <SidebarSection title="Private Channels">
+                <SidebarSection title="SECRET BASES (Private)">
                   {privateChannels.map((ch) => {
                     const isActive = pathname.includes(ch.id);
                     return (
@@ -411,7 +417,7 @@ export default function Sidebar() {
               )}
 
               {/* Direct Messages */}
-              <SidebarSection title="Direct Messages">
+              <SidebarSection title="DEN DEN MUSHI (DMs)">
                 {dms.map((dm: any) => {
                   const partner = dm.other_user || dm;
                   const partnerName = partner.full_name || partner.name || partner.username || "User";
@@ -440,7 +446,7 @@ export default function Sidebar() {
                     className="w-[calc(100%-24px)] mx-3 mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-bold text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/20 border-dashed transition-all active:scale-95 group"
                   >
                     <Users className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    Invite people
+                    Recruit Nakama (Invite)
                   </button>
                 )}
               </SidebarSection>
