@@ -64,7 +64,7 @@ export function CallBanner({ channelId, channelName }: Props) {
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="mx-4 mb-3 rounded-2xl overflow-hidden"
+      className="rounded-2xl overflow-hidden"
       style={{
         background: "linear-gradient(135deg, rgba(35,165,90,0.08) 0%, rgba(35,165,90,0.03) 100%)",
         border: "1px solid rgba(35,165,90,0.15)",

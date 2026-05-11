@@ -59,18 +59,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const iceCandidateQueue = useRef<Record<string, RTCIceCandidateInit[]>>({});
   const speakingCleanupRef = useRef<(() => void) | null>(null);
   const mediaProcessorRef = useRef<MediaProcessor>(new MediaProcessor());
+  const notifiedRoomsRef = useRef(new Set<string>());
 
   // Network monitoring
   useNetworkMonitor(peersRef);
 
   // ── Helpers ─────────────────────────────────────────────────────
   const addTracksToPC = (pc: RTCPeerConnection) => {
-    const stream = useCallStore.getState().localStream;
-    if (!stream) return;
-    const existing = pc.getSenders().map((s) => s.track?.id);
-    stream.getTracks().forEach((track) => {
-      if (!existing.includes(track.id)) pc.addTrack(track, stream);
-    });
+    const { localStream, screenStream } = useCallStore.getState();
+    const senders = pc.getSenders();
+    const existingTrackIds = senders.map((s) => s.track?.id);
+    
+    if (localStream) {
+      localStream.getTracks().forEach((track) => {
+        if (!existingTrackIds.includes(track.id)) pc.addTrack(track, localStream);
+      });
+    }
+    
+    if (screenStream) {
+      screenStream.getTracks().forEach((track) => {
+        if (!existingTrackIds.includes(track.id)) pc.addTrack(track, screenStream);
+      });
+    }
   };
 
   const flushIceCandidates = async (pc: RTCPeerConnection, peerId: string) => {
@@ -383,7 +393,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const onCallStarted = (data: any) => {
       useCallStore.getState().setActiveGroupCall(data.roomId, { channelName: data.channelName, participantCount: 1, participants: [] });
       const currentCallRoomId = useCallStore.getState().callRoomId;
-      if (data.roomId !== currentCallRoomId && user?.id !== data.initiatorId) {
+      
+      if (data.roomId !== currentCallRoomId && user?.id !== data.initiatorId && !notifiedRoomsRef.current.has(data.roomId)) {
+        notifiedRoomsRef.current.add(data.roomId);
+        // Remove from set after some time so they can be notified again if a new call starts later
+        setTimeout(() => notifiedRoomsRef.current.delete(data.roomId), 60000);
+
         toast.custom((t) => (
           <div className={`${t.visible ? "animate-in fade-in slide-in-from-right-5" : "animate-out fade-out slide-out-to-right-5"} max-w-sm w-full bg-[#111214] border border-white/5 shadow-2xl rounded-2xl pointer-events-auto flex flex-col overflow-hidden`}>
             <div className="p-4 flex items-center gap-4">
@@ -395,11 +410,39 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
               <button onClick={() => toast.dismiss(t.id)} className="text-white/20 hover:text-white"><CloseIcon className="w-4 h-4" /></button>
             </div>
             <div className="px-4 pb-4 flex gap-2">
-              <button onClick={() => { toast.dismiss(t.id); router.push(`/channels/${data.roomId}`); }} className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white text-[13px] font-bold rounded-lg transition-all shadow-lg shadow-green-600/20">Join</button>
+              <button 
+                onClick={async () => { 
+                  toast.dismiss(t.id); 
+                  router.push(`/channels/${data.roomId}`);
+                  try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    useCallStore.getState().setLocalStream(stream);
+                    useCallStore.getState().setCalling({ 
+                      isCalling: true, 
+                      roomId: data.roomId, 
+                      isGroupCall: true, 
+                      callType: "audio", 
+                      channelName: data.channelName 
+                    });
+                    getSocket().emit("join-call", { 
+                      roomId: data.roomId, 
+                      userId: user!.id, 
+                      userName: user!.name, 
+                      channelName: data.channelName, 
+                      workspaceId: useAppStore.getState().currentWorkspace?.id 
+                    });
+                  } catch (e: any) {
+                    toast.error("Could not join automatically. Please join manually.");
+                  }
+                }} 
+                className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white text-[13px] font-bold rounded-lg transition-all shadow-lg shadow-green-600/20"
+              >
+                Join Now
+              </button>
               <button onClick={() => toast.dismiss(t.id)} className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-[13px] font-bold rounded-lg">Ignore</button>
             </div>
           </div>
-        ), { duration: 8000, position: "bottom-right" });
+        ), { duration: 10000, position: "bottom-right" });
       }
     };
 
@@ -410,12 +453,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const onCallEnded = (data: any) => useCallStore.getState().setActiveGroupCall(data.roomId, null);
 
     const onSyncState = (state: any) => {
-      // In a real app, we'd have dedicated setters. For now, we'll use state manipulation or just ignore if it's too complex for this turn.
-      // But we should at least handle polls and questions since they are easy to replace.
+      if (state.polls) useCallStore.getState().setPolls(state.polls);
+      if (state.whiteboard) useCallStore.getState().setWhiteboardActions(state.whiteboard);
     };
-
-    const onPollCreated = (poll: any) => { /* logic to add poll to state if we had a list in store */ };
-    const onPollVoted = (data: any) => { /* logic to update poll vote */ };
+    const onWbDraw = (data: any) => {
+      if (data === null || data === undefined) return;
+      if (typeof data !== "object") return;
+      
+      const appState = useAppStore.getState();
+      const myId = appState?.user?.id;
+      const remoteId = data?.userId;
+      
+      if (remoteId && remoteId === myId) return;
+      if (data.x === undefined || data.x === null) return;
+      
+      useCallStore.getState().addWhiteboardAction(data);
+    };
+    const onWbClear = () => useCallStore.getState().clearWhiteboard();
+    const onPollCreated = (poll: any) => useCallStore.getState().addPoll(poll);
+    const onPollVoted = (data: any) => useCallStore.getState().updatePollVote(data.pollId, data.optionId, data.userId);
     const onQuestionNew = (q: any) => { /* logic to add question */ };
     const onQuestionUpvote = (data: any) => { /* logic to update upvote */ };
     const onQuestionAnswered = (data: any) => { /* logic to mark answered */ };
@@ -443,6 +499,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     socket.on("call-participants-update", onCallParticipantsUpdate);
     socket.on("call-ended", onCallEnded);
     socket.on("call-sync-state", onSyncState);
+    socket.on("wb-draw", onWbDraw);
+    socket.on("wb-clear", onWbClear);
     socket.on("call-poll-created", onPollCreated);
     socket.on("call-poll-voted", onPollVoted);
     socket.on("call-qa-new", onQuestionNew);
@@ -472,6 +530,23 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       socket.off("call-ended", onCallEnded);
     };
   }, [user, createPC, cleanupCall, startSpeakingDetection, router]);
+
+  // Handle Screen Share Negotiation
+  useEffect(() => {
+    if (!store.isCalling) return;
+    // When screen sharing toggles, we need to renegotiate with everyone
+    Object.keys(peersRef.current).forEach((peerId) => {
+      const pc = peersRef.current[peerId];
+      if (pc) {
+        addTracksToPC(pc);
+        pc.createOffer()
+          .then((offer) => pc.setLocalDescription(offer))
+          .then(() => {
+            getSocket().emit("offer", { toUserId: peerId, fromUserId: user?.id, offer: pc.localDescription });
+          });
+      }
+    });
+  }, [store.screenStream, store.isCalling, user]);
 
   // Broadcast mute changes
   useEffect(() => {

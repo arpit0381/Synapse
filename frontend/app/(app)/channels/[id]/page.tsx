@@ -793,7 +793,11 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               <Hash className="w-5 h-5 text-accent" />
             </div>
             <div className="flex flex-col min-w-0">
-              <h2 className="font-display font-black text-foreground text-[14px] md:text-[16px] truncate tracking-tight">{channel.name}</h2>
+              <div className="flex items-center gap-2 min-w-0">
+                <h2 className="font-display font-black text-foreground text-[14px] md:text-[16px] truncate tracking-tight">{channel.name}</h2>
+                {/* Compact Call Indicator */}
+                <CallHeaderBanner channelId={id} channelName={channel.name} />
+              </div>
               {channel.description && (
                 <p className="text-[10px] md:text-[11px] text-muted-foreground truncate font-medium uppercase tracking-wider opacity-60 hidden xs:block">{channel.description}</p>
               )}
@@ -837,8 +841,6 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
               </motion.div>
             )}
           </AnimatePresence>
-          {/* Call banner */}
-          <CallBanner channelId={id} channelName={channel.name} />
           {isLoading && (
             <div className="flex flex-col gap-4 p-6">
               <div className="skeleton h-12 w-3/4 rounded-2xl opacity-50" />
@@ -899,6 +901,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
 
           <div ref={bottomRef} className="h-4" />
         </div>
+
 
         {/* ── Input Area ── */}
         <div className="flex-shrink-0 px-5 py-3 glass-strong z-10">
@@ -1244,6 +1247,47 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// ── Call Header Banner (Compact) ───────────────────────────────────
+function CallHeaderBanner({ channelId, channelName }: { channelId: string; channelName: string }) {
+  const store = useCallStore();
+  const { user } = useAppStore();
+  const activeCall = store.activeGroupCalls[channelId];
+  const isInThisCall = store.isCalling && store.callRoomId === channelId;
+
+  if (!activeCall) return null;
+
+  const joinCall = async () => {
+    if (!user || isInThisCall) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      store.setLocalStream(stream);
+      store.setCalling({ isCalling: true, roomId: channelId, isGroupCall: true, callType: "audio", channelName });
+      getSocket().emit("join-call", { roomId: channelId, userId: user.id, userName: user.name, channelName, workspaceId: useAppStore.getState().currentWorkspace?.id });
+    } catch (e: any) {
+      toast.error("Could not access microphone");
+    }
+  };
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      onClick={joinCall}
+      disabled={isInThisCall}
+      className={cn(
+        "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all shadow-sm",
+        isInThisCall 
+          ? "bg-green-500/10 text-green-500 border border-green-500/20 cursor-default" 
+          : "bg-green-600 text-white hover:bg-green-50 hover:shadow-green-500/20 active:scale-95 border border-green-500"
+      )}
+    >
+      <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+      {isInThisCall ? "CONNECTED" : "JOIN CALL"}
+      <span className="opacity-60 font-medium ml-0.5">{activeCall.participantCount}</span>
+    </motion.button>
   );
 }
 

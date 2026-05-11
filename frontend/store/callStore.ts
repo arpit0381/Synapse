@@ -40,6 +40,30 @@ export interface CallChatMessage {
   type?: "text" | "system";
 }
 
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[]; // User IDs
+}
+
+export interface Poll {
+  id: string;
+  creatorId: string;
+  question: string;
+  options: PollOption[];
+  isActive: boolean;
+}
+
+export interface WhiteboardAction {
+  x: number;
+  y: number;
+  prevX: number;
+  prevY: number;
+  color: string;
+  width: number;
+  isEraser: boolean;
+}
+
 export interface CallReaction {
   id: string;
   userId: string;
@@ -100,6 +124,10 @@ export interface CallState {
 
   // ── Reactions
   activeReactions: CallReaction[];
+
+  // ── Polls & Whiteboard
+  polls: Poll[];
+  whiteboardActions: WhiteboardAction[];
 
   // ── Recording
   isRecording: boolean;
@@ -188,6 +216,14 @@ export interface CallState {
   addReaction: (reaction: CallReaction) => void;
   removeReaction: (id: string) => void;
 
+  // Polls & Whiteboard
+  setPolls: (polls: Poll[]) => void;
+  addPoll: (poll: Poll) => void;
+  updatePollVote: (pollId: string, optionId: string, userId: string) => void;
+  setWhiteboardActions: (actions: WhiteboardAction[]) => void;
+  addWhiteboardAction: (action: WhiteboardAction) => void;
+  clearWhiteboard: () => void;
+
   // Recording
   setRecording: (isRecording: boolean) => void;
   setRecordingPaused: (isPaused: boolean) => void;
@@ -252,6 +288,8 @@ const initialState = {
   chatMessages: [] as CallChatMessage[],
   unreadChatCount: 0,
   activeReactions: [] as CallReaction[],
+  polls: [] as Poll[],
+  whiteboardActions: [] as WhiteboardAction[],
   isRecording: false,
   recordingStartTime: null as number | null,
   isPaused: false,
@@ -460,6 +498,29 @@ export const useCallStore = create<CallState>((set, get) => ({
     set((s) => ({ activeReactions: [...s.activeReactions, reaction] })),
   removeReaction: (id) =>
     set((s) => ({ activeReactions: s.activeReactions.filter((r) => r.id !== id) })),
+
+  // ── Polls & Whiteboard ────────────────────────────────────────
+  setPolls: (polls: Poll[]) => set({ polls }),
+  addPoll: (poll: Poll) => set((s) => ({ 
+    polls: s.polls.some(p => p.id === poll.id) ? s.polls : [poll, ...s.polls] 
+  })),
+  updatePollVote: (pollId: string, optionId: string, userId: string) =>
+    set((s) => ({
+      polls: s.polls.map((p: Poll) => {
+        if (p.id !== pollId) return p;
+        return {
+          ...p,
+          options: p.options.map((o: PollOption) => {
+            const filteredVotes = o.votes.filter((id) => id !== userId);
+            if (o.id === optionId) return { ...o, votes: [...filteredVotes, userId] };
+            return { ...o, votes: filteredVotes };
+          }),
+        };
+      }),
+    })),
+  setWhiteboardActions: (actions: WhiteboardAction[]) => set({ whiteboardActions: actions }),
+  addWhiteboardAction: (action: WhiteboardAction) => set((s) => ({ whiteboardActions: [...s.whiteboardActions, action] })),
+  clearWhiteboard: () => set({ whiteboardActions: [] }),
 
   // ── Recording ─────────────────────────────────────────────────
   setRecording: (isRecording) =>

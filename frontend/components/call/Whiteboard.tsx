@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useCallStore } from "@/store/callStore";
+import { useAppStore } from "@/store/appStore";
 import { getSocket } from "@/lib/socket";
 import { Pencil, Eraser, Trash2, Download, Square, Circle as CircleIcon } from "lucide-react";
 import { motion } from "framer-motion";
@@ -43,32 +44,26 @@ export function Whiteboard() {
     window.addEventListener("resize", resize);
     resize();
 
-    // Socket listeners for remote drawing
-    const socket = getSocket();
-    
-    socket.on("call-sync-state", (state: any) => {
-      if (state.whiteboard && state.whiteboard.length > 0) {
-        state.whiteboard.forEach((action: any) => {
-          drawRemote(action.x, action.y, action.prevX, action.prevY, action.color, action.width, action.isEraser);
-        });
+    // Initial draw from store
+    store.whiteboardActions.forEach((action) => {
+      if (action) {
+        drawRemote(action.x, action.y, action.prevX, action.prevY, action.color, action.width, action.isEraser);
       }
     });
 
-    socket.on("wb-draw", (data: any) => {
-      if (!data) return;
-      const { x, y, prevX, prevY, color: remoteColor, width, isEraser } = data;
-      drawRemote(x, y, prevX, prevY, remoteColor, width, isEraser);
-    });
-
-    socket.on("wb-clear", () => clearLocal());
-
     return () => {
       window.removeEventListener("resize", resize);
-      socket.off("call-sync-state");
-      socket.off("wb-draw");
-      socket.off("wb-clear");
     };
   }, []);
+
+  // Listen for new actions from store
+  useEffect(() => {
+    const lastAction = store.whiteboardActions[store.whiteboardActions.length - 1];
+    if (lastAction && !isDrawing) {
+      drawRemote(lastAction.x, lastAction.y, lastAction.prevX, lastAction.prevY, lastAction.color, lastAction.width, lastAction.isEraser);
+    }
+    if (store.whiteboardActions.length === 0) clearLocal();
+  }, [store.whiteboardActions]);
 
   const drawRemote = (x: number, y: number, prevX: number, prevY: number, color: string, width: number, isEraser: boolean) => {
     const ctx = contextRef.current;
@@ -105,16 +100,19 @@ export function Whiteboard() {
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    // Broadcast
-    getSocket().emit("wb-draw", {
-      roomId: store.callRoomId,
+    // Broadcast & Update Local State
+    const action = {
       x, y,
       prevX: lastPoint.current.x,
       prevY: lastPoint.current.y,
       color,
       width: lineWidth,
       isEraser: tool === "eraser"
-    });
+    };
+    
+    const { user: currentUser } = useAppStore.getState();
+    getSocket().emit("wb-draw", { roomId: store.callRoomId, userId: currentUser?.id, ...action });
+    store.addWhiteboardAction(action);
 
     lastPoint.current = { x, y };
   };
@@ -144,6 +142,7 @@ export function Whiteboard() {
 
   const handleClear = () => {
     clearLocal();
+    store.clearWhiteboard();
     getSocket().emit("wb-clear", { roomId: store.callRoomId });
   };
 

@@ -5,7 +5,7 @@ import { useCallStore, CallParticipant } from "@/store/callStore";
 import { useAppStore } from "@/store/appStore";
 import {
   Mic, MicOff, Video, VideoOff, Pin, PinOff,
-  Hand, Wifi, WifiOff, MoreVertical, Volume2,
+  Hand, Wifi, WifiOff, MoreVertical, Volume2, Maximize2, Minimize2, Expand
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -233,14 +233,35 @@ export function VideoTile({
 
       {/* Hover overlay with actions */}
       {!isLocal && !compact && (
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-          <div className="flex gap-2">
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-[2px]">
+          <div className="flex gap-3">
             <button
               onClick={() => store.setPinnedUser(isPinned ? null : userId)}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all text-white"
-              title={isPinned ? "Unpin" : "Pin"}
+              className={`p-3 rounded-2xl transition-all shadow-xl ${isPinned ? "bg-accent text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
+              title={isPinned ? "Unpin" : "Pin / Maximize"}
             >
-              {isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+              {isPinned ? <PinOff className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </button>
+            
+            {isScreenShare && (
+              <button
+                onClick={() => {
+                  if (videoRef.current?.requestFullscreen) {
+                    videoRef.current.requestFullscreen();
+                  }
+                }}
+                className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all shadow-xl"
+                title="View Fullscreen"
+              >
+                <Expand className="w-5 h-5" />
+              </button>
+            )}
+            
+            <button
+              className="p-3 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all shadow-xl"
+              title="More Options"
+            >
+              <MoreVertical className="w-5 h-5" />
             </button>
           </div>
         </div>

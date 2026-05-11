@@ -22,47 +22,12 @@ interface Poll {
 }
 
 export function PollsPanel() {
-  const [polls, setPolls] = useState<Poll[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newQuestion, setNewQuestion] = useState("");
   const [newOptions, setNewOptions] = useState(["", ""]);
   const { user } = useAppStore();
   const store = useCallStore();
-
-  useEffect(() => {
-    const socket = getSocket();
-    
-    socket.on("call-sync-state", (state: any) => {
-      if (state.polls) {
-        setPolls(state.polls);
-      }
-    });
-
-    socket.on("call-poll-created", (poll: Poll) => {
-      setPolls(prev => [poll, ...prev]);
-    });
-    socket.on("call-poll-voted", ({ pollId, optionId, userId }) => {
-      setPolls(prev => prev.map(p => {
-        if (p.id !== pollId) return p;
-        return {
-          ...p,
-          options: p.options.map(o => {
-            // Remove previous vote from this user in this poll
-            const filteredVotes = o.votes.filter(id => id !== userId);
-            if (o.id === optionId) {
-              return { ...o, votes: [...filteredVotes, userId] };
-            }
-            return { ...o, votes: filteredVotes };
-          })
-        };
-      }));
-    });
-    return () => {
-      socket.off("call-sync-state");
-      socket.off("call-poll-created");
-      socket.off("call-poll-voted");
-    };
-  }, []);
+  const polls = store.polls;
 
   const createPoll = () => {
     if (!newQuestion || newOptions.some(o => !o)) return;
@@ -74,7 +39,7 @@ export function PollsPanel() {
       isActive: true,
     };
     getSocket().emit("call-create-poll", { roomId: store.callRoomId, poll });
-    setPolls(prev => [poll, ...prev]);
+    store.addPoll(poll);
     setIsCreating(false);
     setNewQuestion("");
     setNewOptions(["", ""]);
@@ -83,6 +48,7 @@ export function PollsPanel() {
   const vote = (pollId: string, optionId: string) => {
     if (!user) return;
     getSocket().emit("call-vote-poll", { roomId: store.callRoomId, pollId, optionId, userId: user.id });
+    store.updatePollVote(pollId, optionId, user.id);
   };
 
   return (

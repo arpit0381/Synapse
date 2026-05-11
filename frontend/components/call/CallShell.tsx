@@ -19,6 +19,8 @@ import { ReactionOverlay } from "./ReactionOverlay";
 import { LiveCaptions } from "./LiveCaptions";
 import { useRecordingManager } from "./RecordingManager";
 import { motion, AnimatePresence } from "framer-motion";
+import { Maximize2, Mic, MicOff, Video, VideoOff, PhoneOff, Minimize2 } from "lucide-react";
+import { useAppStore } from "@/store/appStore";
 
 const LAYOUT_MAP = {
   grid: VideoGrid,
@@ -43,6 +45,79 @@ export function CallShell({ onEndCall }: { onEndCall: () => void }) {
 
   const LayoutComponent = LAYOUT_MAP[store.layout] || VideoGrid;
   const PanelComponent = store.activePanel ? PANEL_MAP[store.activePanel] : null;
+
+  if (store.isMinimized) {
+    return (
+      <motion.div
+        drag
+        dragMomentum={false}
+        initial={{ opacity: 0, scale: 0.8, x: 20, y: 20 }}
+        animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        className="fixed bottom-6 right-6 z-[100] w-72 aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10 group bg-[#111214]"
+      >
+        {/* Video Preview */}
+        <div className="w-full h-full relative">
+          {store.isCameraOn && store.localStream ? (
+            <video
+              autoPlay
+              playsInline
+              muted
+              ref={(el) => { if (el) el.srcObject = store.localStream; }}
+              className="w-full h-full object-cover scale-x-[-1]"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1e1f22] to-[#111214]">
+              <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center text-white font-bold text-xl">
+                {useAppStore.getState().user?.name?.[0]?.toUpperCase() || "Y"}
+              </div>
+            </div>
+          )}
+
+          {/* Overlay Controls */}
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] text-white font-bold uppercase tracking-wider">Live</span>
+              </div>
+              <button
+                onClick={() => store.setMinimized(false)}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                title="Maximize"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={store.toggleMute}
+                className={`p-2 rounded-full backdrop-blur-md transition-all ${store.isMuted ? "bg-red-500 text-white" : "bg-white/10 hover:bg-white/20 text-white"}`}
+              >
+                {store.isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={store.toggleCamera}
+                className={`p-2 rounded-full backdrop-blur-md transition-all ${!store.isCameraOn ? "bg-red-500 text-white" : "bg-white/10 hover:bg-white/20 text-white"}`}
+              >
+                {store.isCameraOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={onEndCall}
+                className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all"
+              >
+                <PhoneOff className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Drag handle hint */}
+        <div className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </motion.div>
+    );
+  }
 
   return (
     <AnimatePresence>

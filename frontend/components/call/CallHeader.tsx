@@ -5,7 +5,7 @@ import { useCallStore } from "@/store/callStore";
 import {
   Hash, Phone, Users, Lock, Circle, Monitor,
   LayoutGrid, Presentation, PanelRight, Minimize2,
-  Maximize2, Disc,
+  Maximize2, Disc, MicOff, Video, VideoOff,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -122,6 +122,15 @@ export function CallHeader() {
           <Users className="w-4 h-4" />
           <span className="font-medium">{participantCount}</span>
         </div>
+
+        {/* Minimize */}
+        <button
+          onClick={() => store.setMinimized(true)}
+          className="p-2 rounded-lg text-[#b5bac1] hover:text-white hover:bg-white/5 transition-all"
+          title="Minimize Call"
+        >
+          <Minimize2 className="w-4 h-4" />
+        </button>
 
         {/* Layout switcher */}
         <div className="relative">
