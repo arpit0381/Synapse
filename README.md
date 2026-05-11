@@ -20,7 +20,7 @@ For detailed documentation, please see the `/docs` directory.//////
 ## Getting Started......
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 18+.....
 - Supabase account (or local instance)
 - Groq API Key
 
