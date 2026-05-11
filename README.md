@@ -15,12 +15,12 @@ This project is divided into two main parts:
 - `/frontend`: Next.js 15 (App Router) client application.
 - `/backend`: Node.js/Express.js server handling Socket.io and Supabase Admin integrations.
 
-For detailed documentation, please see the `/docs` directory.
-
-## Getting Started
+For detailed documentation, please see the `/docs` directory.//////
+//////
+## Getting Started.........
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 18+.....
 - Supabase account (or local instance)
 - Groq API Key
 
