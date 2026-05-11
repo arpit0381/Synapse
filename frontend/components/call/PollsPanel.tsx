@@ -31,6 +31,13 @@ export function PollsPanel() {
 
   useEffect(() => {
     const socket = getSocket();
+    
+    socket.on("call-sync-state", (state: any) => {
+      if (state.polls) {
+        setPolls(state.polls);
+      }
+    });
+
     socket.on("call-poll-created", (poll: Poll) => {
       setPolls(prev => [poll, ...prev]);
     });
@@ -51,6 +58,7 @@ export function PollsPanel() {
       }));
     });
     return () => {
+      socket.off("call-sync-state");
       socket.off("call-poll-created");
       socket.off("call-poll-voted");
     };

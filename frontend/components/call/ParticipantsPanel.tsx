@@ -7,7 +7,8 @@ import { X, Mic, MicOff, Video, VideoOff, Hand, Crown, Shield, Search } from "lu
 import { motion } from "framer-motion";
 import { InviteLink } from "./InviteLink";
 
-function strHsl(s: string) {
+function strHsl(s: string = "") {
+  if (!s) return "hsl(0, 0%, 20%)"; // Fallback color
   let h = 0;
   for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
   return `hsl(${Math.abs(h) % 360}, 50%, 38%)`;

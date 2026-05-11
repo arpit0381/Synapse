@@ -25,6 +25,13 @@ export function QAPanel() {
 
   useEffect(() => {
     const socket = getSocket();
+
+    socket.on("call-sync-state", (state: any) => {
+      if (state.questions) {
+        setQuestions(state.questions);
+      }
+    });
+
     socket.on("call-qa-new", (q: Question) => {
       setQuestions(prev => [q, ...prev]);
     });
@@ -41,6 +48,7 @@ export function QAPanel() {
       setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, isAnswered } : q));
     });
     return () => {
+      socket.off("call-sync-state");
       socket.off("call-qa-new");
       socket.off("call-qa-upvote");
       socket.off("call-qa-answered");

@@ -530,15 +530,15 @@ io.on("connection", (socket) => {
   });
 
   // ── Whiteboard ────────────────────────────────────────────────
-  socket.on("whiteboard-draw", ({ roomId, action }: any) => {
+  socket.on("wb-draw", ({ roomId, action }: any) => {
     if (!callWhiteboardState.has(roomId)) callWhiteboardState.set(roomId, []);
     callWhiteboardState.get(roomId)!.push(action);
-    socket.to(`call:${roomId}`).emit("whiteboard-draw", action);
+    socket.to(`call:${roomId}`).emit("wb-draw", action);
   });
 
-  socket.on("whiteboard-clear", (roomId: string) => {
+  socket.on("wb-clear", (roomId: string) => {
     callWhiteboardState.set(roomId, []);
-    socket.to(`call:${roomId}`).emit("whiteboard-clear");
+    socket.to(`call:${roomId}`).emit("wb-clear");
   });
 
   // ── Polls ──────────────────────────────────────────────────────

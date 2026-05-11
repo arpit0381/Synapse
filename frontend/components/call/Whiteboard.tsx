@@ -45,7 +45,17 @@ export function Whiteboard() {
 
     // Socket listeners for remote drawing
     const socket = getSocket();
+    
+    socket.on("call-sync-state", (state: any) => {
+      if (state.whiteboard && state.whiteboard.length > 0) {
+        state.whiteboard.forEach((action: any) => {
+          drawRemote(action.x, action.y, action.prevX, action.prevY, action.color, action.width, action.isEraser);
+        });
+      }
+    });
+
     socket.on("wb-draw", (data: any) => {
+      if (!data) return;
       const { x, y, prevX, prevY, color: remoteColor, width, isEraser } = data;
       drawRemote(x, y, prevX, prevY, remoteColor, width, isEraser);
     });
@@ -54,6 +64,7 @@ export function Whiteboard() {
 
     return () => {
       window.removeEventListener("resize", resize);
+      socket.off("call-sync-state");
       socket.off("wb-draw");
       socket.off("wb-clear");
     };
