@@ -851,8 +851,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
             )}
             
             <button onClick={() => setRightPanel(rightPanel === "members" ? null : "members")} className={cn("p-2 rounded-xl transition-all duration-200", rightPanel === "members" ? "bg-accent/15 text-accent shadow-sm" : "text-muted-foreground hover:bg-muted")}><Users className="w-[18px] h-[18px]" /></button>
-            <button onClick={() => handleCall("audio")} className="p-2 rounded-xl text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-200"><Phone className="w-[18px] h-[18px]" /></button>
-            <button onClick={() => handleCall("video")} className="p-2 rounded-xl text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-all duration-200"><Video className="w-[18px] h-[18px]" /></button>
+            <button onClick={() => handleCall("audio")} title="Start Voice Call" className="p-2 rounded-xl text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-200"><Phone className="w-[18px] h-[18px]" /></button>
             <div className="w-px h-5 bg-border/40 mx-0.5" />
             <button onClick={() => setRightPanel(rightPanel === "search" ? null : "search")} className={cn("p-2 rounded-xl transition-all duration-200", rightPanel === "search" ? "bg-accent/15 text-accent shadow-sm" : "text-muted-foreground hover:bg-muted")}><Search className="w-[18px] h-[18px]" /></button>
             <button className="p-2 rounded-xl text-muted-foreground hover:bg-muted transition-all duration-200"><MoreHorizontal className="w-[18px] h-[18px]" /></button>

@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  X, MessageSquare, Phone, Video, Calendar, 
+  X, MessageSquare, Calendar, 
   MapPin, Globe, Mail, Github, Twitter,
   FileText, Activity, Clock
 } from "lucide-react";
@@ -69,9 +69,7 @@ export function MemberDetailModal({ member, isOpen, onClose }: MemberDetailModal
                   <button className="p-3 rounded-2xl bg-white/5 text-white/60 hover:bg-indigo-500 hover:text-white transition-all shadow-lg">
                     <MessageSquare className="w-5 h-5" />
                   </button>
-                  <button className="p-3 rounded-2xl bg-white/5 text-white/60 hover:bg-emerald-500 hover:text-white transition-all shadow-lg">
-                    <Phone className="w-5 h-5" />
-                  </button>
+
                   <button className="p-3 rounded-2xl bg-white text-black font-bold px-6 hover:scale-105 transition-all shadow-lg">
                     Connect
                   </button>

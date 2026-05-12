@@ -8,6 +8,7 @@ import {
   Hand, Disc, Smile, Settings, Volume2, VolumeX,
   ChevronUp, Sparkles, Radio, Eye, Palette, Megaphone,
   BarChart2, HelpCircle, Layers, Zap, ShieldCheck, Terminal,
+  LayoutGrid, Grid3X3, MoreHorizontal,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -188,15 +189,114 @@ function MoreMenu({
   );
 }
 
+/* ─── Utilities Drawer (Mobile) ─────────────────────────────────── */
+function UtilitiesDrawer({
+  onClose,
+  onEndCall,
+}: {
+  onClose: () => void;
+  onEndCall: () => void;
+}) {
+  const store = useCallStore();
+
+  const utilityGroups = [
+    {
+      title: "Interaction",
+      items: [
+        { icon: MessageCircle, label: "Chat", badge: store.unreadChatCount, onClick: () => store.setActivePanel("chat"), active: store.activePanel === "chat" },
+        { icon: Users, label: "People", onClick: () => store.setActivePanel("participants"), active: store.activePanel === "participants" },
+        { icon: Hand, label: store.isHandRaised ? "Lower Hand" : "Raise Hand", onClick: store.toggleHandRaise, active: store.isHandRaised, color: "text-amber-400" },
+        { icon: Smile, label: "Reactions", onClick: () => { /* we'll handle this in the bar maybe */ }, active: false },
+      ]
+    },
+    {
+      title: "Tools",
+      items: [
+        { icon: Palette, label: "Whiteboard", onClick: () => store.setWhiteboardActive(!store.isWhiteboardActive), active: store.isWhiteboardActive },
+        { icon: BarChart2, label: "Polls", onClick: () => store.setActivePanel("polls"), active: store.activePanel === "polls" },
+        { icon: Terminal, label: "Editor", onClick: () => store.setActivePanel("code"), active: store.activePanel === "code" },
+        { icon: HelpCircle, label: "Q&A", onClick: () => store.setActivePanel("qa"), active: store.activePanel === "qa" },
+      ]
+    },
+    {
+      title: "Audio & Video",
+      items: [
+        { icon: store.isDeafened ? VolumeX : Volume2, label: store.isDeafened ? "Undeafen" : "Deafen", onClick: store.toggleDeafen, active: store.isDeafened },
+        { icon: Monitor, label: "Share Screen", onClick: store.toggleScreenShare, active: store.isScreenSharing },
+        { icon: Disc, label: "Record", onClick: () => store.setRecording(!store.isRecording), active: store.isRecording, color: "text-red-400" },
+        { icon: Settings, label: "Settings", onClick: () => store.setActivePanel("settings"), active: false },
+      ]
+    }
+  ];
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] sm:hidden"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="fixed inset-x-0 bottom-0 bg-[#1e1f22] rounded-t-[32px] z-[101] sm:hidden overflow-hidden flex flex-col max-h-[85vh] border-t border-white/10"
+      >
+        {/* Handle */}
+        <div className="w-full flex justify-center pt-4 pb-2">
+          <div className="w-12 h-1.5 rounded-full bg-white/10" />
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 pb-12 pt-4 space-y-8">
+          {utilityGroups.map(group => (
+            <div key={group.title} className="space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#949ba4] px-1">{group.title}</h4>
+              <div className="grid grid-cols-4 gap-4">
+                {group.items.map(item => (
+                  <button
+                    key={item.label}
+                    onClick={() => { item.onClick(); if (item.label !== "Reactions") onClose(); }}
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div className={`
+                      w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200
+                      ${item.active ? "bg-accent/20 text-accent" : "bg-white/[0.04] text-[#dbdee1] active:scale-95"}
+                      ${item.color || ""}
+                    `}>
+                      <item.icon className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] font-bold text-[#949ba4] text-center leading-tight">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* End Call for Mobile Utility Menu */}
+          <button
+            onClick={onEndCall}
+            className="w-full py-4 bg-red-500 hover:bg-red-600 text-white font-black text-sm rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-red-500/20 active:scale-[0.98] transition-all"
+          >
+            <PhoneOff className="w-5 h-5" /> Leave Call
+          </button>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
 /* ─── Main ControlBar ────────────────────────────────────────────── */
 export function ControlBar({ onEndCall }: { onEndCall: () => void }) {
   const store = useCallStore();
+  const [showUtilities, setShowUtilities] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const isVoice = store.callType === "audio";
 
   const handleReaction = (emoji: string) => {
-    // The CallProvider will handle broadcasting this
     const reaction = {
       id: `r_${Date.now()}_${Math.random()}`,
       userId: "local",
@@ -205,187 +305,110 @@ export function ControlBar({ onEndCall }: { onEndCall: () => void }) {
       timestamp: Date.now(),
     };
     store.addReaction(reaction);
-    // Auto-remove after animation
     setTimeout(() => store.removeReaction(reaction.id), 3000);
   };
 
   return (
-    <div
-      className="flex items-center justify-center gap-2 sm:gap-3 px-4 py-4 flex-shrink-0"
-      style={{
-        background: "rgba(17, 18, 20, 0.9)",
-        backdropFilter: "blur(20px)",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-      }}
-    >
-      {/* Mic / Request to Speak */}
-      {store.isStageMode && !store.isHandRaised ? (
-        <CtrlBtn
-          onClick={store.toggleHandRaise}
-          label="Request to Speak"
-          active={store.isHandRaised}
-        >
-          <Hand className="w-5 h-5 text-amber-400" />
-        </CtrlBtn>
-      ) : (
-        <CtrlBtn
-          onClick={store.toggleMute}
-          active={store.isMuted}
-          label={store.isMuted ? "Unmute" : "Mute"}
-          disabled={store.isStageMode && !store.isHandRaised}
-        >
-          {store.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-        </CtrlBtn>
-      )}
+    <>
+      <div
+        className="flex items-center justify-center gap-2 sm:gap-3 px-4 py-4 flex-shrink-0"
+        style={{
+          background: "rgba(17, 18, 20, 0.9)",
+          backdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        {/* Mic / Request to Speak */}
+        {store.isStageMode && !store.isHandRaised ? (
+          <CtrlBtn onClick={store.toggleHandRaise} label="Speak" active={store.isHandRaised}>
+            <Hand className="w-5 h-5 text-amber-400" />
+          </CtrlBtn>
+        ) : (
+          <CtrlBtn onClick={store.toggleMute} active={store.isMuted} label={store.isMuted ? "Unmute" : "Mute"} disabled={store.isStageMode && !store.isHandRaised}>
+            {store.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          </CtrlBtn>
+        )}
 
-      {/* Camera (only for video calls) */}
-      {!isVoice && (
-        <CtrlBtn
-          onClick={store.toggleCamera}
-          active={!store.isCameraOn}
-          label={store.isCameraOn ? "Stop Video" : "Start Video"}
-        >
+        {/* Camera */}
+        <CtrlBtn onClick={store.toggleCamera} active={!store.isCameraOn} label={store.isCameraOn ? "Video Off" : "Video On"}>
           {store.isCameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
         </CtrlBtn>
-      )}
 
-      {/* Screen Share */}
-      <CtrlBtn
-        onClick={() => {
-          // Actual screen share logic is in CallProvider
-          store.toggleScreenShare();
-        }}
-        active={store.isScreenSharing}
-        label={store.isScreenSharing ? "Stop Share" : "Share Screen"}
-      >
-        {store.isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
-      </CtrlBtn>
+        {/* Desktop Only Buttons */}
+        <div className="hidden sm:flex items-center gap-2 sm:gap-3">
+          <CtrlBtn onClick={store.toggleScreenShare} active={store.isScreenSharing} label="Share">
+            {store.isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+          </CtrlBtn>
 
-      {/* Deafen */}
-      <CtrlBtn
-        onClick={store.toggleDeafen}
-        active={store.isDeafened}
-        label={store.isDeafened ? "Undeafen" : "Deafen"}
-      >
-        {store.isDeafened ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-      </CtrlBtn>
+          <CtrlBtn onClick={store.toggleDeafen} active={store.isDeafened} label="Deafen">
+            {store.isDeafened ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </CtrlBtn>
 
-      {/* Divider */}
-      <div className="w-px h-8 bg-white/10 mx-1 hidden sm:block" />
+          <div className="w-px h-8 bg-white/10 mx-1" />
 
-      {/* Chat */}
-      <CtrlBtn
-        onClick={() => store.setActivePanel("chat")}
-        label="Chat"
-        badge={store.unreadChatCount}
-        active={store.activePanel === "chat"}
-      >
-        <MessageCircle className="w-5 h-5" />
-      </CtrlBtn>
+          <CtrlBtn onClick={() => store.setActivePanel("chat")} label="Chat" badge={store.unreadChatCount} active={store.activePanel === "chat"}>
+            <MessageCircle className="w-5 h-5" />
+          </CtrlBtn>
 
-      <CtrlBtn
-        onClick={() => store.setWhiteboardActive(!store.isWhiteboardActive)}
-        label="Whiteboard"
-        active={store.isWhiteboardActive}
-      >
-        <Palette className={`w-5 h-5 ${store.isWhiteboardActive ? "text-accent" : ""}`} />
-      </CtrlBtn>
+          <CtrlBtn onClick={() => store.setWhiteboardActive(!store.isWhiteboardActive)} label="Whiteboard" active={store.isWhiteboardActive}>
+            <Palette className={`w-5 h-5 ${store.isWhiteboardActive ? "text-accent" : ""}`} />
+          </CtrlBtn>
 
-      {/* Polls */}
-      <CtrlBtn
-        onClick={() => store.setActivePanel(store.activePanel === "polls" ? null : "polls")}
-        label="Polls"
-        active={store.activePanel === "polls"}
-      >
-        <BarChart2 className="w-5 h-5" />
-      </CtrlBtn>
+          <CtrlBtn onClick={() => store.setActivePanel("polls")} label="Polls" active={store.activePanel === "polls"}>
+            <BarChart2 className="w-5 h-5" />
+          </CtrlBtn>
 
-      {/* Code Editor */}
-      <CtrlBtn
-        onClick={() => store.setActivePanel(store.activePanel === "code" ? null : "code")}
-        label="Editor"
-        active={store.activePanel === "code"}
-      >
-        <Terminal className="w-5 h-5" />
-      </CtrlBtn>
+          <CtrlBtn onClick={() => store.setActivePanel("code")} label="Editor" active={store.activePanel === "code"}>
+            <Terminal className="w-5 h-5" />
+          </CtrlBtn>
 
-      {/* Q&A */}
-      <CtrlBtn
-        onClick={() => store.setActivePanel(store.activePanel === "qa" ? null : "qa")}
-        label="Q&A"
-        active={store.activePanel === "qa"}
-      >
-        <HelpCircle className="w-5 h-5" />
-      </CtrlBtn>
+          <CtrlBtn onClick={() => store.setActivePanel("qa")} label="Q&A" active={store.activePanel === "qa"}>
+            <HelpCircle className="w-5 h-5" />
+          </CtrlBtn>
 
-      {/* Breakout */}
-      <CtrlBtn
-        onClick={() => store.setActivePanel(store.activePanel === "breakout" ? null : "breakout")}
-        label="Rooms"
-        active={store.activePanel === "breakout"}
-      >
-        <Layers className="w-5 h-5" />
-      </CtrlBtn>
+          <div className="relative">
+            <CtrlBtn onClick={() => setShowReactions(!showReactions)} label="React">
+              <Smile className="w-5 h-5" />
+            </CtrlBtn>
+            <AnimatePresence>{showReactions && <ReactionPicker onPick={handleReaction} onClose={() => setShowReactions(false)} />}</AnimatePresence>
+          </div>
 
-      {/* Participants */}
-      <CtrlBtn
-        onClick={() => store.setActivePanel("participants")}
-        label="People"
-        active={store.activePanel === "participants"}
-      >
-        <Users className="w-5 h-5" />
-      </CtrlBtn>
+          <CtrlBtn onClick={store.toggleHandRaise} active={store.isHandRaised} label="Raise Hand">
+            <Hand className={`w-5 h-5 ${store.isHandRaised ? "text-amber-400" : ""}`} />
+          </CtrlBtn>
 
-      {/* Reactions */}
-      <div className="relative">
-        <CtrlBtn onClick={() => setShowReactions(!showReactions)} label="React">
-          <Smile className="w-5 h-5" />
+          <div className="relative">
+            <CtrlBtn onClick={() => setShowMore(!showMore)} label="More">
+              <ChevronUp className="w-5 h-5" />
+            </CtrlBtn>
+            <AnimatePresence>{showMore && <MoreMenu onClose={() => setShowMore(false)} />}</AnimatePresence>
+          </div>
+
+          <div className="w-px h-8 bg-white/10 mx-1" />
+        </div>
+
+        {/* Mobile Utilities Button */}
+        <div className="sm:hidden">
+          <CtrlBtn onClick={() => setShowUtilities(true)} label="More">
+            <Grid3X3 className="w-5 h-5" />
+          </CtrlBtn>
+        </div>
+
+        {/* End Call - Large on all screens */}
+        <CtrlBtn onClick={onEndCall} danger label="Leave" large>
+          <PhoneOff className="w-6 h-6" />
         </CtrlBtn>
-        <AnimatePresence>
-          {showReactions && (
-            <ReactionPicker
-              onPick={handleReaction}
-              onClose={() => setShowReactions(false)}
-            />
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* Raise Hand */}
-      <CtrlBtn
-        onClick={store.toggleHandRaise}
-        active={store.isHandRaised}
-        label={store.isHandRaised ? "Lower Hand" : "Raise Hand"}
-      >
-        <Hand className={`w-5 h-5 ${store.isHandRaised ? "text-amber-400" : ""}`} />
-      </CtrlBtn>
-
-      {/* Recording */}
-      <CtrlBtn
-        onClick={() => store.setRecording(!store.isRecording)}
-        active={store.isRecording}
-        label={store.isRecording ? "Stop Rec" : "Record"}
-      >
-        <Disc className={`w-5 h-5 ${store.isRecording ? "text-red-400" : ""}`} />
-      </CtrlBtn>
-
-      {/* More */}
-      <div className="relative">
-        <CtrlBtn onClick={() => setShowMore(!showMore)} label="More">
-          <ChevronUp className="w-5 h-5" />
-        </CtrlBtn>
-        <AnimatePresence>
-          {showMore && <MoreMenu onClose={() => setShowMore(false)} />}
-        </AnimatePresence>
-      </div>
-
-      {/* Divider */}
-      <div className="w-px h-8 bg-white/10 mx-1 hidden sm:block" />
-
-      {/* End Call */}
-      <CtrlBtn onClick={onEndCall} danger label="Leave" large>
-        <PhoneOff className="w-6 h-6" />
-      </CtrlBtn>
-    </div>
+      {/* Mobile Utilities Drawer */}
+      <AnimatePresence>
+        {showUtilities && (
+          <UtilitiesDrawer
+            onClose={() => setShowUtilities(false)}
+            onEndCall={onEndCall}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }

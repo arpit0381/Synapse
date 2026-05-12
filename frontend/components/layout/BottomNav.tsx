@@ -6,6 +6,7 @@ import { LayoutDashboard, Search, MessageSquare, Inbox, User } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/store/appStore";
+import { useCallStore } from "@/store/callStore";
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
@@ -18,6 +19,9 @@ const NAV_ITEMS = [
 export default function BottomNav() {
   const pathname = usePathname();
   const { setSidebarOpen } = useAppStore();
+  const { isCalling, isMinimized } = useCallStore();
+
+  if (isCalling && !isMinimized) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-[var(--bottom-nav-height)] bg-surface/80 backdrop-blur-xl border-t border-border/50 flex items-center justify-around px-2 z-[100] lg:hidden">

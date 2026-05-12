@@ -241,7 +241,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         });
       });
     })();
-  }, [store.backgroundBlurEnabled, store.noiseSuppressionEnabled, store.backgroundImage]); // eslint-disable-line
+  }, [store.localStream, store.backgroundBlurEnabled, store.noiseSuppressionEnabled, store.backgroundImage]); // eslint-disable-line
 
   // ── Push-to-talk ────────────────────────────────────────────────
   useEffect(() => {
@@ -300,15 +300,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (!participants[fromUserId]) {
         useCallStore.getState().upsertParticipant({ id: fromUserId, name: "User", isMuted: false, isSpeaking: false, isCameraOn: true, isHandRaised: false, isScreenSharing: false, networkQuality: "excellent" });
       }
-      let pc = peersRef.current[fromUserId];
-      if (!pc || pc.connectionState === "closed") pc = createPC(fromUserId);
+      const pc = peersRef.current[fromUserId];
+      if (!pc || pc.connectionState === "closed") return;
+
+      // Simple glare handling: if we have a local offer and are "less polite", ignore incoming
+      // For a robust implementation, use rollback, but for now, checking state is safer
+      if (pc.signalingState !== "stable" && pc.signalingState !== "have-remote-offer") {
+        if (user.id < fromUserId) { // We are "impolite", we yield to their offer
+           // In a full implementation we'd call rollback here
+        } else {
+          return; // Ignore their offer, ours is pending
+        }
+      }
+
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         await flushIceCandidates(pc, fromUserId);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit("answer", { toUserId: fromUserId, fromUserId: user.id, answer });
-      } catch (e) { console.error("[WebRTC] onOffer error", e); }
+      } catch (e) { 
+        console.warn("[WebRTC] onOffer glare or error", e); 
+      }
     };
 
     const onAnswer = async ({ fromUserId, answer }: any) => {
@@ -531,22 +544,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user, createPC, cleanupCall, startSpeakingDetection, router]);
 
-  // Handle Screen Share Negotiation
+  // Handle Stream Renegotiation
   useEffect(() => {
-    if (!store.isCalling) return;
-    // When screen sharing toggles, we need to renegotiate with everyone
-    Object.keys(peersRef.current).forEach((peerId) => {
-      const pc = peersRef.current[peerId];
-      if (pc) {
-        addTracksToPC(pc);
-        pc.createOffer()
-          .then((offer) => pc.setLocalDescription(offer))
-          .then(() => {
-            getSocket().emit("offer", { toUserId: peerId, fromUserId: user?.id, offer: pc.localDescription });
-          });
+    if (!store.isCalling || !user) return;
+    
+    const renegotiate = async () => {
+      for (const peerId of Object.keys(peersRef.current)) {
+        const pc = peersRef.current[peerId];
+        if (pc && pc.signalingState === "stable") {
+          try {
+            addTracksToPC(pc);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            getSocket().emit("offer", { toUserId: peerId, fromUserId: user.id, offer });
+          } catch (e) {
+            console.warn("[WebRTC] Renegotiation failed for", peerId, e);
+          }
+        }
       }
-    });
-  }, [store.screenStream, store.isCalling, user]);
+    };
+
+    renegotiate();
+  }, [store.localStream, store.screenStream, store.isCalling, user]);
 
   // Broadcast mute changes
   useEffect(() => {

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, Paperclip, Smile, Phone, Video, MoreHorizontal, Search, Check, CheckCheck, X, File, Image as ImageIcon, Download, Loader2, FileText, Table, CheckSquare, Bot, Sparkle, AtSign, Users, Hash } from "lucide-react";
+import { Send, Paperclip, Smile, MoreHorizontal, Search, Check, CheckCheck, X, File, Image as ImageIcon, Download, Loader2, FileText, Table, CheckSquare, Bot, Sparkle, AtSign, Users, Hash } from "lucide-react";
 import { cn, getInitials, stringToColor, formatTime, getChatDateLabel } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/appStore";
@@ -85,33 +85,7 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
     id, name: "Loading...", status: "offline", bio: "...", timezone: "...", avatar_url: undefined
   };
 
-  const handleCall = async (type: "audio" | "video") => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: type === "video", audio: true });
-      store.setLocalStream(stream);
-      const roomId = [user?.id, id].sort().join("_");
-      store.upsertParticipant({ id, name: dmUser.name, isMuted: false, isSpeaking: false });
-      store.setCalling({ isCalling: true, roomId, isGroupCall: false, callType: type });
-      const socket = getSocket();
-      socket.emit("call-user", {
-        userToCall: id,
-        fromUserId: user?.id,
-        fromUserName: user?.name,
-        type,
-        isGroupCall: false,
-        callRoomId: roomId,
-      });
-      // Join the room ourselves to hear broadcasts (mute/speaking)
-      socket.emit("join-call", {
-        roomId,
-        userId: user?.id,
-        userName: user?.name,
-      });
-    } catch (e: any) {
-      console.error("Failed to get media", e);
-      toast.error(e.message === "Permission denied" ? "Microphone/Camera permission denied" : "Could not access media devices");
-    }
-  };
+
 
   // Fetch messages
   const { data: messagesData, isLoading } = useQuery({
@@ -613,8 +587,7 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
           </div>
         </div>
         <div className="flex items-center gap-0.5 sm:gap-1">
-          <button onClick={() => handleCall("audio")} title="Voice Call" className="p-2 sm:p-2.5 rounded-xl text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-200"><Phone className="w-[18px] h-[18px]" /></button>
-          <button onClick={() => handleCall("video")} title="Video Call" className="p-2 sm:p-2.5 rounded-xl text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-all duration-200"><Video className="w-[18px] h-[18px]" /></button>
+
           <div className="w-px h-5 bg-border/50 mx-0.5 sm:mx-1" />
           <button onClick={() => setRightPanel(rightPanel === "search" ? null : "search")} title="Search Chat" className={cn("p-2 sm:p-2.5 rounded-xl transition-all duration-200", rightPanel === "search" ? "bg-accent/15 text-accent shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted")}><Search className="w-[18px] h-[18px]" /></button>
           <button title="More Options" className="p-2 sm:p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"><MoreHorizontal className="w-[18px] h-[18px]" /></button>
@@ -647,9 +620,7 @@ export default function DmPage({ params }: { params: Promise<{ id: string }> }) 
               <button onClick={() => inputRef.current?.focus()} className="px-5 py-2.5 rounded-xl accent-gradient text-white text-sm font-semibold shadow-lg hover:shadow-accent/30 hover:scale-105 transition-all duration-200 flex items-center gap-2">
                 <Send className="w-4 h-4" /> Say Hello
               </button>
-              <button onClick={() => handleCall("audio")} className="px-5 py-2.5 rounded-xl bg-surface border border-border text-foreground text-sm font-semibold hover:bg-muted transition-all duration-200 flex items-center gap-2">
-                <Phone className="w-4 h-4" /> Call
-              </button>
+
             </div>
           </div>
         )}

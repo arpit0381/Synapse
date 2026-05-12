@@ -176,7 +176,7 @@ export interface CallState {
 
   // Controls
   toggleMute: () => void;
-  toggleCamera: () => void;
+  toggleCamera: () => Promise<void>;
   toggleDeafen: () => void;
   toggleScreenShare: () => void;
   toggleHandRaise: () => void;
@@ -319,6 +319,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       isGroupCall,
       callType,
       channelName,
+      isCameraOn: callType === "video",
       callStartTime: isCalling ? Date.now() : null,
     }),
 
@@ -357,12 +358,33 @@ export const useCallStore = create<CallState>((set, get) => ({
       return { isMuted: next };
     }),
 
-  toggleCamera: () =>
-    set((s) => {
-      const next = !s.isCameraOn;
-      s.localStream?.getVideoTracks().forEach((t) => { t.enabled = next; });
-      return { isCameraOn: next };
-    }),
+  toggleCamera: async () => {
+    const s = get();
+    const next = !s.isCameraOn;
+    
+    if (next && s.localStream && s.localStream.getVideoTracks().length === 0) {
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const videoTrack = videoStream.getVideoTracks()[0];
+        if (videoTrack) {
+          s.localStream.addTrack(videoTrack);
+          // Create a new stream object to trigger reference changes in effects
+          const newStream = new MediaStream(s.localStream.getTracks());
+          set({ localStream: newStream, isCameraOn: true });
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to get video track", e);
+        return;
+      }
+    }
+
+    if (s.localStream) {
+      s.localStream.getVideoTracks().forEach((t) => { t.enabled = next; });
+      // Trigger a shallow update to ensure UI reacts
+      set({ isCameraOn: next });
+    }
+  },
 
   toggleDeafen: () =>
     set((s) => {

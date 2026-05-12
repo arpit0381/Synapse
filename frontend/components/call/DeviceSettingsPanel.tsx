@@ -88,19 +88,19 @@ export function DeviceSettingsPanel() {
         <hr className="border-white/5" />
 
         {/* Toggles */}
-        <ToggleRow icon={Sparkles} label="Noise Suppression" checked={store.noiseSuppressionEnabled} onChange={(v) => store.setNoiseSuppression(v)} />
-        <ToggleRow icon={Radio} label="Push to Talk (Space)" checked={store.pushToTalkEnabled} onChange={(v) => store.setPushToTalk(v)} />
+        <ToggleRow icon={Sparkles} label="Noise Suppression" checked={!!store.noiseSuppressionEnabled} onChange={(v) => store.setNoiseSuppression(v)} />
+        <ToggleRow icon={Radio} label="Push to Talk (Space)" checked={!!store.pushToTalkEnabled} onChange={(v) => store.setPushToTalk(v)} />
 
         {/* Backgrounds */}
         <div className="pt-4 border-t border-white/5">
           <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[#949ba4] mb-3"><ImageIcon className="w-3.5 h-3.5" />Virtual Backgrounds</label>
           <div className="grid grid-cols-2 gap-2">
             <BgOption label="None" onClick={() => { store.setBackgroundImage(null); store.setBackgroundBlur(false); }} active={!store.backgroundImage && !store.backgroundBlurEnabled} />
-            <BgOption label="Blur" onClick={() => { store.setBackgroundImage(null); store.setBackgroundBlur(true); }} active={store.backgroundBlurEnabled} />
-            <BgOption label="Office" onClick={() => store.setBackgroundImage("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400")} active={store.backgroundImage?.includes("photo-1497366216548")} />
-            <BgOption label="Abstract" onClick={() => store.setBackgroundImage("https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80&w=400")} active={store.backgroundImage?.includes("photo-1557683316")} />
-            <BgOption label="Nature" onClick={() => store.setBackgroundImage("https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80&w=400")} active={store.backgroundImage?.includes("photo-1441974231531")} />
-            <BgOption label="Studio" onClick={() => store.setBackgroundImage("https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80&w=400")} active={store.backgroundImage?.includes("photo-1598488035139")} />
+            <BgOption label="Blur" onClick={() => { store.setBackgroundImage(null); store.setBackgroundBlur(true); }} active={!!store.backgroundBlurEnabled} />
+            <BgOption label="Office" onClick={() => store.setBackgroundImage("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400")} active={!!store.backgroundImage?.includes("photo-1497366216548")} />
+            <BgOption label="Abstract" onClick={() => store.setBackgroundImage("https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80&w=400")} active={!!store.backgroundImage?.includes("photo-1557683316")} />
+            <BgOption label="Nature" onClick={() => store.setBackgroundImage("https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80&w=400")} active={!!store.backgroundImage?.includes("photo-1441974231531")} />
+            <BgOption label="Studio" onClick={() => store.setBackgroundImage("https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80&w=400")} active={!!store.backgroundImage?.includes("photo-1598488035139")} />
           </div>
         </div>
       </div>
