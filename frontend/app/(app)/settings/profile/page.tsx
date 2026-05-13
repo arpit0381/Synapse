@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Camera, Mail, Lock, Save, Loader2, Check, Globe, Settings, Clock, Smile } from "lucide-react";
+import { User, Camera, Mail, Lock, Save, Loader2, Check, Globe, Settings, Clock, Smile, LogOut } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import { api } from "@/lib/api";
 import { cn, getInitials, stringToColor } from "@/lib/utils";
@@ -219,12 +219,19 @@ export default function ProfilePage() {
             </div>
           </motion.div>
 
-          <div className="flex justify-end pt-4">
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-3 px-8 py-4 accent-gradient text-white rounded-[18px] font-bold text-sm hover:scale-[1.02] transition-all shadow-xl shadow-accent/20 disabled:opacity-50 btn-press">
-              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              {saving ? "SAVING..." : "SAVE CHANGES"}
-            </button>
-          </div>
+           <div className="flex justify-between items-center pt-4">
+             <button onClick={handleSave} disabled={saving} className="flex items-center gap-3 px-8 py-4 accent-gradient text-white rounded-[18px] font-bold text-sm hover:scale-[1.02] transition-all shadow-xl shadow-accent/20 disabled:opacity-50 btn-press">
+               {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+               {saving ? "SAVING..." : "SAVE CHANGES"}
+             </button>
+             <button onClick={() => {
+               useAppStore.getState().clearAuth();
+               window.location.href = "/login";
+             }} className="flex items-center gap-3 px-8 py-4 bg-destructive text-white rounded-[18px] font-bold text-sm hover:scale-[1.02] transition-all shadow-xl shadow-destructive/20 btn-press">
+               <LogOut className="w-5 h-5" />
+               Log Out
+             </button>
+           </div>
         </div>
       </div>
     </div>
