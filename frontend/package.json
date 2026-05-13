@@ -1,5 +1,5 @@
 {
-  "name": "synapse-lite-frontend",
+  "name": "synapse-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {

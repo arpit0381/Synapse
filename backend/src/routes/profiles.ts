@@ -93,11 +93,11 @@ router.get("/:id/cloudinary-signature", (req: Request, res: Response) => {
   const timestamp = Math.round(new Date().getTime() / 1000).toString();
   
   // Cloudinary signature generation
-  // 1. Create a string with the parameters to sign
-  const paramsToSign: Record<string, string> = {
-    timestamp: timestamp,
-    folder: `synapse-lite/avatars/${req.params.id}`
-  };
+    // 1. Create a string with the parameters to sign
+    const paramsToSign: Record<string, string> = {
+      timestamp: timestamp,
+      folder: `synapse/avatars/${req.params.id}`
+    };
 
   const sortedKeys = Object.keys(paramsToSign).sort();
   const stringToSign = sortedKeys.map(k => `${k}=${paramsToSign[k]}`).join('&');

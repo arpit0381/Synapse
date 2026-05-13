@@ -1,5 +1,5 @@
 {
-  "name": "synapse-lite-backend",
+  "name": "synapse-backend",
   "version": "1.0.0",
   "description": "Synapse Lite real-time API & Socket.io server",
   "main": "dist/index.js",
