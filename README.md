@@ -1,4 +1,4 @@
-# Synapse Lite
+# Synapse Lite....
 
 Synapse Lite is a real-time collaborative workspace application built with Next.js 15, React 19, Tailwind CSS, Zustand, Socket.io, Express.js, and Supabase.
 
