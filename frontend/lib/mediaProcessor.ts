@@ -143,7 +143,7 @@ export class MediaProcessor {
     this.noiseFilter.type = "highpass";
     this.noiseFilter.frequency.value = 150; // Filter out below 150Hz
 
-    // Dynamics compressor to normalize volume and reduce background noise floor
+    // Dynamics compressor to normalize volume and reduce background noise floor..............
     const compressor = this.audioCtx.createDynamicsCompressor();
     compressor.threshold.value = -50;
     compressor.knee.value = 40;
