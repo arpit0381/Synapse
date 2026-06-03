@@ -1,6 +1,6 @@
 /**
  * MediaProcessor
- * 
+ * .......................
  * Handles real-time video and audio processing for Synapse Lite.
  * Features: Background Blur (Canvas), Noise Suppression (Web Audio).
  */
