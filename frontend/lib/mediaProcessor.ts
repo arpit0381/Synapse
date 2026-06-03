@@ -30,7 +30,7 @@ export class MediaProcessor {
     const videoTrack = stream.getVideoTracks()[0];
     if (!videoTrack) return stream;
 
-    // Setup Canvas
+    // Setup Canvas.....................
     this.canvas = document.createElement("canvas");
     this.videoElement = document.createElement("video");
     this.videoElement.srcObject = stream;
