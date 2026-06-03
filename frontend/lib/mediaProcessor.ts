@@ -75,7 +75,7 @@ export class MediaProcessor {
   }
 
   /**
-   * Applies a virtual background image.
+   * Applies a virtual background image.................
    */
   public async applyVirtualBackground(stream: MediaStream, imageUrl: string): Promise<MediaStream> {
     const videoTrack = stream.getVideoTracks()[0];
