@@ -1,26 +1,29 @@
-# Synapse Lite....
-
-Synapse Lite is a real-time collaborative workspace application built with Next.js 15, React 19, Tailwind CSS, Zustand, Socket.io, Express.js, and Supabase.
+# Synapse
+================
+🚀 Real-time collaborative workspace app with features like messaging and audio/video calls.
 
 ## Features
-- **Real-Time Messaging**: Direct messages, channel messaging, and real-time typing indicators.
-- **Presence Tracking**: Heartbeat-based online/offline status, away states, and DND.
-- **Audio/Video Calls**: Integrated WebRTC via PeerJS and Socket.io signaling.
-- **Workspace Management**: Multiple workspaces with robust role-based access control.
-- **File Sharing**: Integrated Appwrite / Cloudinary storage.
-- **AI Assistant**: Groq-powered contextual summaries and smart replies.
+------------
 
-## Architecture
-This project is divided into two main parts:
-- `/frontend`: Next.js 15 (App Router) client application.
-- `/backend`: Node.js/Express.js server handling Socket.io and Supabase Admin integrations.
+* **Real-Time Messaging**: Direct messages, channel messaging, and real-time typing indicators.
+* **Presence Tracking**: Heartbeat-based online/offline status, away states, and DND.
+* **Audio/Video Calls**: Integrated WebRTC via PeerJS and Socket.io signaling.
+* **Workspace Management**: Multiple workspaces with robust role-based access control.
+* **File Sharing**: Integrated Appwrite / Cloudinary storage.
+* **AI Assistant**: Groq-powered contextual summaries and smart replies.
 
-For detailed documentation, please see the `/docs` directory.//////
-//////
-## Getting Started.........
+## Tech Stack
+-------------
+
+* **Frontend**: Next.js 15, React 19, Tailwind CSS, Zustand
+* **Backend**: Node.js, Express.js, Socket.io, Supabase
+* **Database**: Supabase
+
+## Installation
+------------
 
 ### Prerequisites
-- Node.js 18+.....
+- Node.js 18+
 - Supabase account (or local instance)
 - Groq API Key
 
@@ -39,5 +42,18 @@ For detailed documentation, please see the `/docs` directory.//////
 
 Your app should now be running at `http://localhost:3000`.
 
+## Usage
+-----
+
+* Access the app at `http://localhost:3000`
+* Use the app's features, such as real-time messaging, audio/video calls, and workspace management
+
+## Documentation
+-------------
+
+For detailed documentation, please see the `/docs` directory.
+
 ## License
-MIT
+-------
+
+[MIT](https://opensource.org/licenses/MIT)
