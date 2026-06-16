@@ -6,12 +6,21 @@ export const metadata: Metadata = {
   title: { default: "Synapse Lite", template: "%s | Synapse Lite" },
   description: "A Slack + Notion + Trello hybrid for startups and students. Chat, tasks, files — all in one place.",
   keywords: ["team collaboration", "project management", "chat", "tasks", "startup tool"],
+  manifest: "/manifest.json",
   openGraph: {
     title: "Synapse Lite",
     description: "Your team's digital sanctum. Chat, plan, execute.",
     type: "website",
   },
   robots: { index: true, follow: true },
+};
+
+export const viewport = {
+  themeColor: "#0f172a",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
